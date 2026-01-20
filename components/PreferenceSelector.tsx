@@ -1,5 +1,5 @@
-import React from 'react';
-import { Baby, User, Users, Coffee, UtensilsCrossed, Apple, Milk, EyeOff, Minus, Plus, Ban, Sprout, Settings2, ShieldAlert } from 'lucide-react';
+import React, { useState } from 'react';
+import { Baby, User, Users, Coffee, UtensilsCrossed, Apple, Milk, EyeOff, Minus, Plus, Ban, Sprout, Settings2, ShieldAlert, ChevronDown } from 'lucide-react';
 import { AgeGroup, MealType } from '../types';
 import { ROMANIAN_SPICES, COMMON_ALLERGENS } from '../constants';
 
@@ -29,6 +29,7 @@ export const PreferenceSelector: React.FC<Props> = ({
   allergens, setAllergens,
   spices, setSpices
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
   
   const isChild = ageGroup !== 'adult';
 
@@ -49,18 +50,34 @@ export const PreferenceSelector: React.FC<Props> = ({
   };
 
   return (
-    <div className="bg-stone-900 rounded-3xl shadow-xl shadow-black/50 overflow-hidden mb-8 border border-stone-800">
+    <div className="bg-stone-900 rounded-3xl shadow-xl shadow-black/50 overflow-hidden mb-8 border border-stone-800 transition-all duration-300">
       {/* Header */}
-      <div className="bg-stone-950 p-6 text-white flex items-center gap-3 border-b border-stone-800">
-         <span className="bg-stone-800 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg text-stone-300">2</span>
-         <div>
-            <h2 className="text-xl font-bold text-stone-100">Configurează Masa</h2>
-            <p className="text-stone-500 text-xs mt-0.5">Personalizează experiența culinară</p>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-stone-950 p-6 text-white flex items-center justify-between border-b border-stone-800 cursor-pointer group hover:bg-stone-900 transition-colors relative overflow-hidden"
+      >
+         {/* Background Decoration */}
+         <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <Settings2 size={100} />
          </div>
-         <Settings2 className="ml-auto text-stone-800" size={48} />
+
+         <div className="flex items-center gap-3 relative z-10">
+            <span className="bg-stone-800 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg text-stone-300 ring-1 ring-stone-700">2</span>
+            <div>
+                <h2 className="text-xl font-bold text-stone-100">Configurează Masa</h2>
+                <p className="text-stone-500 text-sm mt-0.5">
+                  {isOpen ? 'Personalizează experiența culinară.' : 'Apasă pentru a deschide opțiunile.'}
+                </p>
+            </div>
+         </div>
+
+         <div className={`bg-stone-900 p-2 rounded-full border border-stone-800 text-stone-400 shadow-lg transition-transform duration-300 group-hover:bg-stone-800 group-hover:text-stone-200 relative z-10 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
+            <ChevronDown size={24} />
+         </div>
       </div>
       
-      <div className="p-6 md:p-8 space-y-10">
+      {isOpen && (
+      <div className="p-6 md:p-8 space-y-10 animate-fade-in">
         {/* Age Selector */}
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-4">
@@ -236,6 +253,7 @@ export const PreferenceSelector: React.FC<Props> = ({
             </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

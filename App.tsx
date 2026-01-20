@@ -6,7 +6,7 @@ import { RecipeCard } from './components/RecipeCard';
 import { SavedRecipesList } from './components/SavedRecipesList';
 import { generateRecipe } from './services/geminiService';
 import { Recipe, AgeGroup, MealType } from './types';
-import { Loader2, Utensils } from 'lucide-react';
+import { Loader2, Utensils, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const App = () => {
   // State for Generator
@@ -19,6 +19,7 @@ const App = () => {
   const [hideVeggies, setHideVeggies] = useState(false);
   const [portions, setPortions] = useState(2);
   const [avoidIngredients, setAvoidIngredients] = useState('');
+  const [allergens, setAllergens] = useState<string[]>([]);
   const [spices, setSpices] = useState<string[]>([]);
   
   // State for App Logic
@@ -31,8 +32,20 @@ const App = () => {
   const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
   const [selectedSavedRecipe, setSelectedSavedRecipe] = useState<Recipe | null>(null);
 
-  // Load recipes on mount
+  // State for PWA Install Prompt
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  // Toast Notification State
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'warning'} | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Load recipes and setup PWA listener on mount
   useEffect(() => {
+    // Load Recipes
     try {
       const saved = localStorage.getItem('bucataras_recipes');
       if (saved) {
@@ -41,18 +54,44 @@ const App = () => {
     } catch (e) {
       console.error("Failed to load recipes", e);
     }
+
+    // PWA Install Prompt Listener
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
-  const saveToLocalStorage = (recipes: Recipe[]) => {
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+    
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
+
+  const saveToLocalStorage = (recipes: Recipe[]): boolean => {
     try {
       localStorage.setItem('bucataras_recipes', JSON.stringify(recipes));
       setSavedRecipes(recipes);
+      return true;
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        alert("Memoria este plină! Încearcă să ștergi rețete vechi sau cele cu imagini mari.");
+        showToast("Memoria telefonului este plină! Șterge rețete vechi pentru a salva altele noi.", 'warning');
       } else {
         console.error("Failed to save", e);
+        showToast("Nu am putut salva rețeta. Eroare necunoscută.", 'error');
       }
+      return false;
     }
   };
 
@@ -91,6 +130,7 @@ const App = () => {
         hideVeggies,
         portions,
         avoidIngredients,
+        allergens,
         spices
       });
       setCurrentRecipe(result);
@@ -105,23 +145,30 @@ const App = () => {
   const handleSaveRecipe = (recipeToSave: Recipe) => {
     // Avoid duplicates by ID check
     const exists = savedRecipes.find(r => r.id === recipeToSave.id);
+    let success = false;
+    
     if (!exists) {
       const updatedList = [recipeToSave, ...savedRecipes];
-      saveToLocalStorage(updatedList);
+      success = saveToLocalStorage(updatedList);
     } else {
         // Update existing (e.g. added image)
         const updatedList = savedRecipes.map(r => r.id === recipeToSave.id ? recipeToSave : r);
-        saveToLocalStorage(updatedList);
+        success = saveToLocalStorage(updatedList);
+    }
+
+    if (success) {
+      showToast("Rețeta a fost salvată cu succes!", 'success');
     }
   };
 
   const handleDeleteRecipe = (id: string) => {
     const updatedList = savedRecipes.filter(r => r.id !== id);
-    saveToLocalStorage(updatedList);
+    const success = saveToLocalStorage(updatedList);
     if (selectedSavedRecipe?.id === id) {
        setSelectedSavedRecipe(null);
        setView('saved');
     }
+    if (success) showToast("Rețetă ștearsă.", 'success');
   };
 
   const handleReset = () => {
@@ -145,7 +192,7 @@ const App = () => {
          <div className="space-y-4">
             <button 
               onClick={() => setView('saved')}
-              className="text-sm font-semibold text-slate-500 hover:text-brand-600 flex items-center gap-1 mb-2"
+              className="text-sm font-semibold text-stone-500 hover:text-brand-400 flex items-center gap-1 mb-2 transition-colors"
             >
               ← Înapoi la listă
             </button>
@@ -186,12 +233,14 @@ const App = () => {
           setPortions={setPortions}
           avoidIngredients={avoidIngredients}
           setAvoidIngredients={setAvoidIngredients}
+          allergens={allergens}
+          setAllergens={setAllergens}
           spices={spices}
           setSpices={setSpices}
         />
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100">
+          <div className="bg-red-900/20 text-red-400 p-4 rounded-xl text-sm font-medium border border-red-900/50">
             {error}
           </div>
         )}
@@ -202,10 +251,10 @@ const App = () => {
             disabled={loading || selectedIngredients.length === 0}
             className={`w-full py-4 rounded-xl font-bold text-lg shadow-xl flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
               loading 
-                ? 'bg-slate-800 text-slate-400 cursor-not-allowed'
+                ? 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
                 : selectedIngredients.length === 0 
-                  ? 'bg-slate-200 text-slate-400' 
-                  : 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-brand-500/30'
+                  ? 'bg-stone-800 text-stone-500 border border-stone-700' 
+                  : 'bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-brand-900/50 border border-brand-600'
             }`}
           >
             {loading ? (
@@ -222,7 +271,7 @@ const App = () => {
           </button>
         </div>
         
-        <div className="text-center text-slate-400 text-xs mt-4 pb-8">
+        <div className="text-center text-stone-600 text-xs mt-4 pb-8">
           Powered by AI • Rețete unice de fiecare dată • Inspirat din Satu Mare
         </div>
       </div>
@@ -236,9 +285,25 @@ const App = () => {
           onShowSaved={() => setView('saved')} 
           onGoHome={() => { setView('generator'); handleReset(); }}
           isSavedView={view === 'saved' || view === 'details'}
+          onInstall={handleInstallApp}
+          canInstall={!!installPrompt}
         />
         
         {renderContent()}
+
+        {/* Toast Notification */}
+        {toast && (
+          <div className={`fixed bottom-24 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 min-w-[300px] animate-fade-in ${
+            toast.type === 'success' ? 'bg-stone-800 text-white border border-stone-700' :
+            toast.type === 'warning' ? 'bg-amber-900 text-amber-100 border border-amber-800' :
+            'bg-red-900 text-red-100 border border-red-800'
+          }`}>
+             {toast.type === 'success' && <CheckCircle className="text-brand-500" size={20} />}
+             {toast.type === 'warning' && <AlertTriangle className="text-amber-500" size={20} />}
+             {toast.type === 'error' && <AlertTriangle className="text-red-500" size={20} />}
+             <span className="font-medium text-sm">{toast.message}</span>
+          </div>
+        )}
       </div>
     </div>
   );

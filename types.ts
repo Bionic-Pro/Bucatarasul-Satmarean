@@ -6,8 +6,10 @@ export interface Ingredient {
 
 export interface NutritionalDetail {
   ingredient: string;
-  details: string; // e.g., "Vit C, Iron"
+  details: string; // e.g., "Vit C, Iron" or general description
   calories: number;
+  value?: number; // e.g., 12
+  unit?: string; // e.g., "g", "mg", "µg"
 }
 
 export interface Recipe {
@@ -36,5 +38,6 @@ export interface UserPreferences {
   hideVeggies: boolean;
   portions: number;
   avoidIngredients: string;
+  allergens: string[];
   spices: string[];
 }

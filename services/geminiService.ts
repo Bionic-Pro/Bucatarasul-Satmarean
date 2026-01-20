@@ -30,8 +30,12 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe> =>
   };
   const mealContext = mealTypeMap[prefs.mealType] || "Masă principală";
 
-  const avoidContext = prefs.avoidIngredients ? `EVITĂ COMPLET: ${prefs.avoidIngredients}. ` : "";
+  const avoidContext = prefs.avoidIngredients ? `EVITĂ COMPLET (Ingrediente specificate de user): ${prefs.avoidIngredients}. ` : "";
   const spiceContext = prefs.spices.length > 0 ? `Folosește condimentele: ${prefs.spices.join(', ')}. ` : "";
+  
+  const allergenContext = prefs.allergens.length > 0 
+    ? `CRITIC - ALERGENI/RESTRICȚII DE SĂNĂTATE: Rețeta NU trebuie să conțină sub nicio formă ingrediente interzise pentru: ${prefs.allergens.join(', ')}. Dacă un ingredient selectat conține un alergen (ex: paste cu gluten), ÎNLOCUIEȘTE-L cu o variantă sigură sau exclude-l.` 
+    : "";
 
   const systemInstruction = `
     Ești un bucătar șef expert din Satu Mare, România. 
@@ -39,7 +43,8 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe> =>
     Vorbești doar în limba Română.
     Stilul tău combină tradiția locală (ardelenească/sătmăreană) cu nevoile moderne de nutriție.
     Dacă rețeta este pentru copii, fii creativ și asigură-te că este echilibrată nutrițional.
-    Include detalii nutriționale valide (calorii pozitive, descrieri reale) pentru ingredientele principale.
+    Include detalii nutriționale valide (calorii pozitive, gramaje estimative pentru macronutrienți principali per ingredient important) pentru ingredientele principale.
+    Acordă prioritate absolută siguranței alimentare: dacă utilizatorul selectează un alergen (Gluten, Lactoză etc.), este INTERZIS să folosești ingrediente care îl conțin.
     Folosește un ton cald, prietenos.
   `;
 
@@ -49,6 +54,7 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe> =>
     INGREDIENTE DISPONIBILE: ${prefs.ingredients.join(', ')}.
     ${spiceContext}
     ${avoidContext}
+    ${allergenContext}
     TIP MASĂ: ${mealContext}.
     PENTRU CINE: ${targetAudience}.
     PORȚII: ${prefs.portions}.
@@ -89,8 +95,10 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe> =>
                 type: Type.OBJECT,
                 properties: {
                   ingredient: { type: Type.STRING },
-                  details: { type: Type.STRING, description: "Vitamine/Minerale (ex: 'Vit C, Fier'). Must not be empty." },
-                  calories: { type: Type.NUMBER, description: "Calorii aprox per porție. Must be > 0." }
+                  details: { type: Type.STRING, description: "Scurtă descriere (ex: 'Bogat în proteine')." },
+                  calories: { type: Type.NUMBER, description: "Calorii aprox per porție. Must be > 0." },
+                  value: { type: Type.NUMBER, description: "Cantitate numerică (ex: 12). Optional." },
+                  unit: { type: Type.STRING, description: "Unitate de măsură (ex: 'g', 'mg'). Optional." }
                 }
               }
             }

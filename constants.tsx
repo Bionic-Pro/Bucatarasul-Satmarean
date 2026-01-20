@@ -1,6 +1,6 @@
 import React from 'react';
 import { Ingredient } from './types';
-import { Carrot, Beef, Milk, Wheat, Apple, CupSoda } from 'lucide-react';
+import { Carrot, Beef, Milk, Wheat, Apple, CupSoda, Flame, Thermometer, Gauge, Wind, Disc, Utensils } from 'lucide-react';
 
 export const CATEGORIES = {
   legume: { label: 'Legume & Verdețuri', icon: <Carrot className="w-5 h-5" /> },
@@ -19,6 +19,15 @@ export const COMMON_ALLERGENS = [
   { id: 'eggs', label: 'Fără Ouă' },
   { id: 'seafood', label: 'Fără Fructe de Mare' },
   { id: 'histamine', label: 'Nivel scăzut Histamină' },
+];
+
+export const COOKING_METHODS_LIST = [
+  { id: 'orice', label: 'Orice Metodă', icon: <Utensils size={24} /> },
+  { id: 'aragaz', label: 'Aragaz / Plită', icon: <Flame size={24} /> },
+  { id: 'cuptor', label: 'La Cuptor', icon: <Thermometer size={24} /> },
+  { id: 'presiune', label: 'Oală sub presiune', icon: <Gauge size={24} /> },
+  { id: 'airfryer', label: 'Air Fryer', icon: <Wind size={24} /> },
+  { id: 'drycooker', label: 'Dry Cooker', icon: <Disc size={24} /> },
 ];
 
 export const PREDEFINED_INGREDIENTS: Ingredient[] = [

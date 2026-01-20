@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Hero } from './components/Hero';
 import { IngredientSelector } from './components/IngredientSelector';
 import { PreferenceSelector } from './components/PreferenceSelector';
+import { CookingMethodSelector } from './components/CookingMethodSelector';
 import { RecipeCard } from './components/RecipeCard';
 import { SavedRecipesList } from './components/SavedRecipesList';
+import { ProfileModal } from './components/ProfileModal';
 import { generateRecipe } from './services/geminiService';
-import { Recipe, AgeGroup, MealType } from './types';
+import { Recipe, AgeGroup, MealType, UserProfile, CookingMethod } from './types';
 import { Loader2, Utensils, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const App = () => {
@@ -16,6 +18,7 @@ const App = () => {
   // State for Preferences matching UserPreferences type
   const [ageGroup, setAgeGroup] = useState<AgeGroup>('adult');
   const [mealType, setMealType] = useState<MealType>('pranz_cina');
+  const [cookingMethod, setCookingMethod] = useState<CookingMethod>('orice');
   const [hideVeggies, setHideVeggies] = useState(false);
   const [portions, setPortions] = useState(2);
   const [avoidIngredients, setAvoidIngredients] = useState('');
@@ -32,6 +35,11 @@ const App = () => {
   const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
   const [selectedSavedRecipe, setSelectedSavedRecipe] = useState<Recipe | null>(null);
 
+  // Auth State
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const firstLoadRef = useRef(true);
+
   // State for PWA Install Prompt
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
@@ -43,53 +51,139 @@ const App = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Load recipes and setup PWA listener on mount
+  // --- Auth & Persistence Logic ---
+
+  // Load User on Mount
   useEffect(() => {
-    // Load Recipes
+    const savedUserStr = localStorage.getItem('bucataras_current_user');
+    if (savedUserStr) {
+      try {
+        const userData = JSON.parse(savedUserStr);
+        setUser(userData);
+        // Load user specific prefs
+        if (userData.preferences) {
+           setAllergens(userData.preferences.allergens || []);
+           setAvoidIngredients(userData.preferences.avoidIngredients || '');
+        }
+      } catch (e) {
+        console.error("Auth load error", e);
+      }
+    }
+  }, []);
+
+  // Load Recipes (Context Aware: Global or User specific?)
+  useEffect(() => {
+    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes';
     try {
-      const saved = localStorage.getItem('bucataras_recipes');
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         setSavedRecipes(JSON.parse(saved));
+      } else {
+        setSavedRecipes([]);
       }
     } catch (e) {
       console.error("Failed to load recipes", e);
     }
+  }, [user]);
 
-    // PWA Install Prompt Listener
+  // Sync Allergens/Avoids to User Profile whenever they change
+  useEffect(() => {
+    if (user && !firstLoadRef.current) {
+       const updatedUser = {
+         ...user,
+         preferences: {
+           allergens: allergens,
+           avoidIngredients: avoidIngredients
+         }
+       };
+       // Only update if actually changed to avoid loop (simplified check)
+       if (JSON.stringify(user.preferences) !== JSON.stringify(updatedUser.preferences)) {
+         setUser(updatedUser);
+         localStorage.setItem('bucataras_current_user', JSON.stringify(updatedUser));
+       }
+    }
+    firstLoadRef.current = false;
+  }, [allergens, avoidIngredients]);
+
+  // PWA Prompt
+  useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setInstallPrompt(e);
     };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
+
+  // --- Handlers ---
 
   const handleInstallApp = async () => {
     if (!installPrompt) return;
-    
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setInstallPrompt(null);
+  };
+
+  const handleGoogleLogin = () => {
+    // Simulate Google Sign In
+    const mockUser: UserProfile = {
+      id: 'usr_' + Date.now(),
+      name: 'Utilizator Google',
+      email: 'user@gmail.com',
+      photoURL: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+      preferences: {
+        allergens: [],
+        avoidIngredients: ''
+      }
+    };
     
-    if (outcome === 'accepted') {
-      setInstallPrompt(null);
+    // Check if we have previous mock user in storage to "restore"
+    setUser(mockUser);
+    localStorage.setItem('bucataras_current_user', JSON.stringify(mockUser));
+    
+    // Reset current inputs to user defaults (empty for new user)
+    setAllergens([]);
+    setAvoidIngredients('');
+    
+    showToast(`Bun venit, ${mockUser.name}!`, 'success');
+  };
+
+  const handleUpdateProfile = (updatedUser: UserProfile) => {
+    setUser(updatedUser);
+    localStorage.setItem('bucataras_current_user', JSON.stringify(updatedUser));
+    showToast('Profil actualizat!', 'success');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('bucataras_current_user');
+    // Reset inputs
+    setAllergens([]);
+    setAvoidIngredients('');
+    setSavedRecipes([]); // Will reload guest recipes in useEffect
+    setShowProfileModal(false);
+    showToast('Te-ai deconectat.', 'success');
+  };
+
+  const handleDeleteProfile = () => {
+    if (user) {
+      localStorage.removeItem(`bucataras_recipes_${user.id}`);
+      handleLogout();
+      showToast('Profil șters definitiv.', 'warning');
     }
   };
 
   const saveToLocalStorage = (recipes: Recipe[]): boolean => {
+    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes';
     try {
-      localStorage.setItem('bucataras_recipes', JSON.stringify(recipes));
+      localStorage.setItem(storageKey, JSON.stringify(recipes));
       setSavedRecipes(recipes);
       return true;
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        showToast("Memoria telefonului este plină! Șterge rețete vechi pentru a salva altele noi.", 'warning');
+        showToast("Memoria telefonului este plină!", 'warning');
       } else {
-        console.error("Failed to save", e);
-        showToast("Nu am putut salva rețeta. Eroare necunoscută.", 'error');
+        showToast("Eroare la salvare.", 'error');
       }
       return false;
     }
@@ -127,6 +221,7 @@ const App = () => {
         ingredients: selectedIngredients,
         ageGroup,
         mealType,
+        cookingMethod,
         hideVeggies,
         portions,
         avoidIngredients,
@@ -134,31 +229,25 @@ const App = () => {
         spices
       });
       setCurrentRecipe(result);
-      setView('generator'); // Stay on generator view but show card
+      setView('generator'); 
     } catch (err: any) {
-      setError(err.message || "Ceva nu a mers bine. Încearcă din nou.");
+      setError(err.message || "Ceva nu a mers bine.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSaveRecipe = (recipeToSave: Recipe) => {
-    // Avoid duplicates by ID check
     const exists = savedRecipes.find(r => r.id === recipeToSave.id);
     let success = false;
-    
     if (!exists) {
       const updatedList = [recipeToSave, ...savedRecipes];
       success = saveToLocalStorage(updatedList);
     } else {
-        // Update existing (e.g. added image)
         const updatedList = savedRecipes.map(r => r.id === recipeToSave.id ? recipeToSave : r);
         success = saveToLocalStorage(updatedList);
     }
-
-    if (success) {
-      showToast("Rețeta a fost salvată cu succes!", 'success');
-    }
+    if (success) showToast("Rețeta a fost salvată!", 'success');
   };
 
   const handleDeleteRecipe = (id: string) => {
@@ -201,17 +290,6 @@ const App = () => {
        );
     }
 
-    // Generator View
-    if (currentRecipe) {
-      return (
-        <RecipeCard 
-          recipe={currentRecipe} 
-          onReset={handleReset} 
-          onSave={handleSaveRecipe}
-        />
-      );
-    }
-
     return (
       <div className="space-y-6">
         <IngredientSelector 
@@ -220,6 +298,11 @@ const App = () => {
           customIngredients={customIngredients}
           onAddCustom={handleAddCustom}
           onRemoveCustom={handleRemoveCustom}
+        />
+
+        <CookingMethodSelector 
+          selectedMethod={cookingMethod}
+          onSelect={setCookingMethod}
         />
 
         <PreferenceSelector 
@@ -271,6 +354,17 @@ const App = () => {
           </button>
         </div>
         
+        {/* Result is rendered here only if we stay on generator view */}
+        {currentRecipe && (
+           <div className="mt-12 border-t border-stone-800 pt-8">
+              <RecipeCard 
+                recipe={currentRecipe} 
+                onReset={handleReset} 
+                onSave={handleSaveRecipe}
+              />
+           </div>
+        )}
+        
         <div className="text-center text-stone-600 text-xs mt-4 pb-8">
           Powered by AI • Rețete unice de fiecare dată • Inspirat din Satu Mare
         </div>
@@ -287,9 +381,22 @@ const App = () => {
           isSavedView={view === 'saved' || view === 'details'}
           onInstall={handleInstallApp}
           canInstall={!!installPrompt}
+          user={user}
+          onLogin={handleGoogleLogin}
+          onOpenProfile={() => setShowProfileModal(true)}
         />
         
         {renderContent()}
+
+        {showProfileModal && user && (
+          <ProfileModal 
+            user={user}
+            onClose={() => setShowProfileModal(false)}
+            onUpdate={handleUpdateProfile}
+            onDelete={handleDeleteProfile}
+            onLogout={handleLogout}
+          />
+        )}
 
         {/* Toast Notification */}
         {toast && (

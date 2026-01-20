@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Baby, User, Users, Coffee, UtensilsCrossed, Apple, Milk, EyeOff, Minus, Plus, Ban, Sprout, Settings2, ShieldAlert, ChevronDown } from 'lucide-react';
+import { Baby, User, Users, Coffee, UtensilsCrossed, Apple, Milk, EyeOff, Minus, Plus, Ban, Sprout, Settings2, ShieldAlert, ChevronDown, X } from 'lucide-react';
 import { AgeGroup, MealType } from '../types';
 import { ROMANIAN_SPICES, COMMON_ALLERGENS } from '../constants';
 
@@ -30,6 +30,7 @@ export const PreferenceSelector: React.FC<Props> = ({
   spices, setSpices
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [customAllergenInput, setCustomAllergenInput] = useState('');
   
   const isChild = ageGroup !== 'adult';
 
@@ -49,6 +50,22 @@ export const PreferenceSelector: React.FC<Props> = ({
     }
   };
 
+  const handleCustomAllergenSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = customAllergenInput.trim();
+    if (val && !allergens.includes(val)) {
+      setAllergens([...allergens, val]);
+      setCustomAllergenInput('');
+    }
+  };
+
+  const removeCustomAllergen = (val: string) => {
+    setAllergens(allergens.filter(a => a !== val));
+  };
+
+  // Identify which selected allergens are NOT in the predefined list
+  const customAllergens = allergens.filter(a => !COMMON_ALLERGENS.some(ca => ca.label === a));
+
   return (
     <div className="bg-stone-900 rounded-3xl shadow-xl shadow-black/50 overflow-hidden mb-8 border border-stone-800 transition-all duration-300">
       {/* Header */}
@@ -62,7 +79,7 @@ export const PreferenceSelector: React.FC<Props> = ({
          </div>
 
          <div className="flex items-center gap-3 relative z-10">
-            <span className="bg-stone-800 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg text-stone-300 ring-1 ring-stone-700">2</span>
+            <span className="bg-stone-800 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg text-stone-300 ring-1 ring-stone-700">3</span>
             <div>
                 <h2 className="text-xl font-bold text-stone-100">Configurează Masa</h2>
                 <p className="text-stone-500 text-sm mt-0.5">
@@ -144,7 +161,9 @@ export const PreferenceSelector: React.FC<Props> = ({
            <label className="block text-xs font-bold text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
               <ShieldAlert size={16} /> Alergeni & Sănătate
            </label>
-           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+           
+           {/* Predefined List */}
+           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
               {COMMON_ALLERGENS.map((allergen) => {
                  const isSelected = allergens.includes(allergen.label);
                  return (
@@ -162,13 +181,49 @@ export const PreferenceSelector: React.FC<Props> = ({
                  );
               })}
            </div>
+
+           {/* Manual Add */}
+           <div className="pt-3 border-t border-red-900/20">
+              <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wide mb-2">
+                Adaugă manual altă restricție:
+              </label>
+              <form onSubmit={handleCustomAllergenSubmit} className="flex gap-2">
+                <input
+                  type="text"
+                  value={customAllergenInput}
+                  onChange={(e) => setCustomAllergenInput(e.target.value)}
+                  placeholder="ex: Căpșuni, Arahide..."
+                  className="flex-1 px-3 py-2 rounded-xl border border-stone-800 bg-stone-900 text-stone-200 text-sm focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-900 transition-colors placeholder-stone-600"
+                />
+                <button 
+                  type="submit"
+                  disabled={!customAllergenInput.trim()}
+                  className="bg-stone-800 text-stone-300 p-2 rounded-xl hover:bg-stone-700 disabled:opacity-50 transition-all shadow border border-stone-700"
+                >
+                  <Plus size={20} />
+                </button>
+              </form>
+
+              {customAllergens.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {customAllergens.map((item) => (
+                    <span key={item} className="inline-flex items-center gap-1 bg-red-950 text-red-200 border border-red-900/50 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">
+                      {item}
+                      <button onClick={() => removeCustomAllergen(item)} className="hover:text-red-100 hover:bg-red-900/50 rounded-full p-0.5 ml-1 transition-colors">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+           </div>
         </div>
 
         {/* Avoid Ingredients & Spices */}
         <div className="grid md:grid-cols-2 gap-8">
           <div className="bg-stone-950 p-4 rounded-2xl border border-stone-800">
             <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <Ban size={14} className="text-stone-400" /> Alte Ingrediente de Evitat
+              <Ban size={14} className="text-stone-400" /> Ingrediente de evitat
             </label>
             <input 
               type="text"
@@ -229,9 +284,8 @@ export const PreferenceSelector: React.FC<Props> = ({
 
             {/* Portions */}
             <div className="flex-1 bg-stone-950 border border-stone-800 rounded-2xl p-4 flex items-center justify-between">
-                <div className="flex flex-col">
+                <div className="flex flex-col justify-center">
                     <span className="font-bold text-stone-200 text-sm">Număr Porții</span>
-                    <span className="text-xs text-stone-500">Câtă lume mănâncă?</span>
                 </div>
                 <div className="flex items-center gap-3 bg-stone-900 rounded-xl p-1.5 shadow-sm border border-stone-800">
                     <button 

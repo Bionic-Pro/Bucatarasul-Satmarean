@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Recipe, UserPreferences, NutritionalDetail } from "../types";
+import { COOKING_METHODS_LIST } from "../constants";
 
 const createClient = () => {
   const apiKey = process.env.API_KEY;
@@ -33,6 +34,9 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe> =>
   const avoidContext = prefs.avoidIngredients ? `EVITĂ COMPLET (Ingrediente specificate de user): ${prefs.avoidIngredients}. ` : "";
   const spiceContext = prefs.spices.length > 0 ? `Folosește condimentele: ${prefs.spices.join(', ')}. ` : "";
   
+  const cookingMethodLabel = COOKING_METHODS_LIST.find(m => m.id === prefs.cookingMethod)?.label || 'Orice Metodă';
+  const cookingMethodContext = prefs.cookingMethod !== 'orice' ? `METODA DE GĂTIRE OBLIGATORIE: ${cookingMethodLabel}. Rețeta trebuie adaptată pentru acest echipament.` : "Metoda de gătire: La alegerea ta, cea mai potrivită pentru ingrediente.";
+
   const allergenContext = prefs.allergens.length > 0 
     ? `CRITIC - ALERGENI/RESTRICȚII DE SĂNĂTATE: Rețeta NU trebuie să conțină sub nicio formă ingrediente interzise pentru: ${prefs.allergens.join(', ')}. Dacă un ingredient selectat conține un alergen (ex: paste cu gluten), ÎNLOCUIEȘTE-L cu o variantă sigură sau exclude-l.` 
     : "";
@@ -55,6 +59,7 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe> =>
     ${spiceContext}
     ${avoidContext}
     ${allergenContext}
+    ${cookingMethodContext}
     TIP MASĂ: ${mealContext}.
     PENTRU CINE: ${targetAudience}.
     PORȚII: ${prefs.portions}.

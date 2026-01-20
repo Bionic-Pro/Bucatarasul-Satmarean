@@ -1,3 +1,4 @@
+
 export interface Ingredient {
   id: string;
   name: string;
@@ -30,14 +31,27 @@ export interface Recipe {
 
 export type AgeGroup = '1-3' | '4-8' | '9-13' | 'adult';
 export type MealType = 'mic_dejun' | 'pranz_cina' | 'gustare' | 'smoothie';
+export type CookingMethod = 'orice' | 'aragaz' | 'cuptor' | 'presiune' | 'airfryer' | 'drycooker' | 'gratar';
 
 export interface UserPreferences {
   ingredients: string[];
   ageGroup: AgeGroup;
   mealType: MealType;
+  cookingMethod: CookingMethod;
   hideVeggies: boolean;
   portions: number;
   avoidIngredients: string;
   allergens: string[];
   spices: string[];
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  photoURL?: string;
+  preferences: {
+    allergens: string[];
+    avoidIngredients: string;
+  };
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Recipe } from '../types';
-import { Clock, Flame, Trash2, ChevronRight, BookOpen } from 'lucide-react';
+import { Clock, Flame, Trash2, ChevronRight, BookOpen, Utensils } from 'lucide-react';
 
 interface Props {
   recipes: Recipe[];
@@ -11,14 +11,20 @@ interface Props {
 export const SavedRecipesList: React.FC<Props> = ({ recipes, onSelect, onDelete }) => {
   if (recipes.length === 0) {
     return (
-      <div className="text-center py-20 bg-stone-900/60 backdrop-blur-sm rounded-3xl border border-stone-800 shadow-xl shadow-black/30">
-        <div className="bg-stone-800 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-stone-600 shadow-inner">
-           <BookOpen size={48} />
+      <div className="text-center py-20 bg-stone-900/60 backdrop-blur-sm rounded-3xl border border-stone-800 shadow-xl shadow-black/30 flex flex-col items-center px-6">
+        <div className="relative mb-8">
+           <div className="bg-brand-900/20 w-32 h-32 rounded-full flex items-center justify-center text-brand-500 shadow-inner border border-brand-900/30 animate-pulse">
+              <BookOpen size={64} />
+           </div>
+           <div className="absolute -bottom-2 -right-2 bg-amber-600 p-2 rounded-full border-4 border-stone-900 text-white shadow-lg">
+              <Utensils size={20} />
+           </div>
         </div>
-        <h3 className="text-2xl font-bold text-stone-200 mb-3">Nu ai rețete salvate</h3>
-        <p className="text-stone-500 max-w-xs mx-auto text-sm leading-relaxed">
-          Generează rețete noi și salvează-le pe cele care îți plac pentru a crea propria ta carte de bucate.
+        <h3 className="text-2xl font-bold text-stone-100 mb-3">Cartea ta de bucate e goală</h3>
+        <p className="text-stone-400 max-w-xs mx-auto text-sm leading-relaxed mb-8">
+          Începe prin a selecta câteva ingrediente în generator. Salvează rețetele care îți fac cu ochiul pentru a le găsi rapid aici!
         </p>
+        <div className="w-16 h-1 bg-brand-900/50 rounded-full"></div>
       </div>
     );
   }
@@ -37,7 +43,6 @@ export const SavedRecipesList: React.FC<Props> = ({ recipes, onSelect, onDelete 
             className="bg-stone-900 p-4 rounded-2xl shadow-lg border border-stone-800 hover:border-brand-500/50 hover:shadow-2xl hover:shadow-brand-500/10 flex gap-5 transition-all duration-500 group cursor-pointer relative overflow-hidden transform hover:-translate-y-1 hover:scale-[1.02]" 
             onClick={() => onSelect(recipe)}
           >
-            {/* Background decorative blob */}
             <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-brand-900 rounded-full opacity-0 group-hover:opacity-10 transition-opacity blur-3xl duration-700"></div>
 
             <div className="w-32 h-32 rounded-xl bg-stone-950 shrink-0 overflow-hidden relative shadow-inner border border-stone-800 group-hover:border-brand-500/30 transition-colors">

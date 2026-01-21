@@ -28,7 +28,7 @@ export const CookingMethodSelector: React.FC<Props> = ({ selectedMethod, onSelec
          </div>
 
          <div className="flex items-center gap-3 relative z-10">
-            <span className="bg-amber-700 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg text-white ring-1 ring-amber-600">2</span>
+            <span className="bg-amber-700 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg text-white ring-2 ring-amber-900">2</span>
             <div>
                 <h2 className="text-xl font-bold text-stone-100">Metoda de Gătire</h2>
                 <p className="text-stone-500 text-sm mt-0.5">
@@ -51,8 +51,8 @@ export const CookingMethodSelector: React.FC<Props> = ({ selectedMethod, onSelec
                 onClick={() => onSelect(method.id as CookingMethod)}
                 className={`flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-200 group ${
                   selectedMethod === method.id 
-                    ? 'bg-amber-900/40 border-amber-700 text-white shadow-lg ring-1 ring-amber-600' 
-                    : 'bg-stone-950 border-stone-800 text-stone-500 hover:border-amber-900/40 hover:bg-stone-900 hover:text-stone-300'
+                    ? 'bg-amber-900/30 border-amber-600 text-white shadow-[0_0_15px_rgba(245,158,11,0.2)] ring-1 ring-amber-900' 
+                    : 'bg-stone-950 border-stone-800 text-stone-500 hover:border-stone-600 hover:bg-stone-900 hover:text-stone-300'
                 }`}
               >
                 <div className={`mb-3 transition-transform duration-300 ${selectedMethod === method.id ? 'text-amber-400 scale-110' : 'text-stone-600 group-hover:text-amber-500/70'}`}>

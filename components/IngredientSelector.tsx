@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { CATEGORIES, PREDEFINED_INGREDIENTS } from '../constants';
 import { Check, Plus, X, Search, Filter, ChevronDown } from 'lucide-react';
-import { Ingredient } from '../types';
 
 interface Props {
   selectedIds: string[];
@@ -50,7 +49,7 @@ export const IngredientSelector: React.FC<Props> = ({
         <div className="relative z-10 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2 text-stone-100">
-              <span className="bg-brand-600 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-lg text-white">1</span>
+              <span className="bg-brand-600 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-lg text-white ring-2 ring-brand-800">1</span>
               Ce ai în cămară?
             </h2>
             <p className="text-brand-200/60 text-sm mt-1 pl-10">
@@ -73,13 +72,15 @@ export const IngredientSelector: React.FC<Props> = ({
                 <button
                   key={key}
                   onClick={() => { setActiveTab(key); setSearchTerm(''); }}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl whitespace-nowrap text-sm font-bold transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl whitespace-nowrap text-sm font-bold transition-all duration-200 border ${
                     activeTab === key 
-                      ? 'bg-brand-700 text-white shadow-lg shadow-brand-900/50 ring-1 ring-brand-500' 
-                      : 'bg-stone-900 text-stone-500 border border-stone-800 hover:bg-stone-800 hover:text-stone-300'
+                      ? 'bg-brand-900/80 text-white border-brand-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]' 
+                      : 'bg-stone-900 text-stone-500 border-stone-800 hover:bg-stone-800 hover:text-stone-300 hover:border-stone-700'
                   }`}
                 >
-                  {value.icon}
+                  <span className={activeTab === key ? 'text-brand-400' : 'text-stone-600'}>
+                    {value.icon}
+                  </span>
                   {value.label}
                 </button>
               ))}
@@ -99,7 +100,7 @@ export const IngredientSelector: React.FC<Props> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={`Caută în ${CATEGORIES[activeTab].label}...`}
-                className="w-full pl-10 pr-4 py-3 bg-stone-950 border border-stone-800 rounded-xl text-stone-200 placeholder-stone-600 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 transition-all text-sm"
+                className="w-full pl-10 pr-4 py-3 bg-stone-950 border border-stone-800 rounded-xl text-stone-200 placeholder-stone-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-sm"
               />
             </div>
 
@@ -112,10 +113,10 @@ export const IngredientSelector: React.FC<Props> = ({
                     <button
                       key={ing.id}
                       onClick={() => onToggle(ing.name)}
-                      className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm text-left transition-all duration-200 group ${
+                      className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm text-left transition-all duration-200 group border ${
                         isSelected
-                          ? 'bg-brand-900/50 text-white font-bold ring-1 ring-brand-500 shadow-md shadow-brand-900/20'
-                          : 'bg-stone-950 text-stone-400 hover:bg-stone-800 hover:text-stone-200 border border-stone-800'
+                          ? 'bg-brand-900/40 border-brand-500 text-brand-100 shadow-md shadow-brand-900/20 ring-1 ring-brand-900'
+                          : 'bg-stone-950 border-stone-800 text-stone-400 hover:bg-stone-800 hover:text-stone-200 hover:border-stone-600'
                       }`}
                     >
                       <span>{ing.name}</span>

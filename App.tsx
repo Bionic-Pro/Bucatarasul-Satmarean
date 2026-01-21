@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Hero } from './components/Hero';
 import { IngredientSelector } from './components/IngredientSelector';
@@ -122,15 +123,22 @@ const App = () => {
   };
 
   const handleSaveRecipe = (recipeToSave: Recipe) => {
-    const exists = savedRecipes.find(r => r.id === recipeToSave.id);
-    const updatedList = exists 
-      ? savedRecipes.map(r => r.id === recipeToSave.id ? recipeToSave : r)
-      : [recipeToSave, ...savedRecipes];
+    // Check if a recipe with this specific ID or Title already exists to avoid duplication
+    const exists = savedRecipes.find(r => r.id === recipeToSave.id || r.title === recipeToSave.title);
+    
+    let updatedList;
+    if (exists) {
+      updatedList = savedRecipes.map(r => 
+        (r.id === exists.id || r.title === exists.title) ? { ...recipeToSave, id: r.id } : r
+      );
+    } else {
+      updatedList = [recipeToSave, ...savedRecipes];
+    }
     
     const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes';
     localStorage.setItem(storageKey, JSON.stringify(updatedList));
     setSavedRecipes(updatedList);
-    showToast("Rețetă salvată cu succes!", 'success');
+    showToast(`${recipeToSave.title} salvată!`, 'success');
   };
 
   const handleDeleteRecipe = (id: string) => {
@@ -165,8 +173,8 @@ const App = () => {
     if (view === 'details' && selectedSavedRecipe) {
        return (
          <div className="space-y-4 animate-fade-in">
-            <button onClick={() => setView('saved')} className="text-sm font-bold text-stone-500 hover:text-roBlue-400 flex items-center gap-1 mb-2 transition-colors">
-              ← Înapoi la colecție
+            <button onClick={() => setView('saved')} className="text-xs font-black uppercase tracking-widest text-stone-500 hover:text-roBlue-400 flex items-center gap-2 mb-4 transition-colors">
+              <ChevronLeft size={16} /> Înapoi la colecție
             </button>
             <RecipeCard recipe={selectedSavedRecipe} isSavedMode={true} />
          </div>
@@ -217,16 +225,16 @@ const App = () => {
           <button
             onClick={handleGenerate}
             disabled={loading || selectedIngredients.length === 0}
-            className={`w-full py-5 rounded-[2rem] font-black text-lg shadow-2xl flex items-center justify-center gap-3 transition-all transform active:scale-95 ${
+            className={`w-full py-5 rounded-[2.5rem] font-black text-lg shadow-2xl flex items-center justify-center gap-3 transition-all transform active:scale-95 border-b-4 ${
               loading 
-                ? 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
+                ? 'bg-stone-800 text-stone-500 cursor-not-allowed border-stone-900'
                 : selectedIngredients.length === 0 
-                  ? 'bg-stone-900/80 text-stone-600 border border-stone-800' 
-                  : 'bg-gradient-to-r from-roBlue-700 via-roYellow-600 to-roRed-700 text-white shadow-stone-950 border border-white/20'
+                  ? 'bg-stone-900/80 text-stone-600 border-stone-800' 
+                  : 'bg-gradient-to-r from-roBlue-700 via-roYellow-600 to-roRed-700 text-white shadow-stone-950 border-white/20 hover:brightness-110'
             }`}
           >
             {loading ? (
-              <><Loader2 className="animate-spin" /> Se pregătește meniul...</>
+              <><Loader2 className="animate-spin" /> Pregătim bunătățile...</>
             ) : (
               <><Utensils className={selectedIngredients.length > 0 ? "animate-bounce" : ""} /> Generează Gustul Ardelenesc</>
             )}
@@ -234,17 +242,18 @@ const App = () => {
         </div>
         
         {currentRecipes.length > 0 && (
-           <div className="mt-12 border-t border-white/5 pt-8 pb-12 animate-fade-in">
+           <div className="mt-12 border-t border-white/5 pt-10 pb-16 animate-fade-in">
               {currentRecipes.length > 1 && (
-                <div className="flex items-center justify-between mb-6 bg-stone-950/80 p-4 rounded-3xl border border-white/5 backdrop-blur-md">
-                  <button onClick={() => setCurrentRecipeIdx(p => Math.max(0, p - 1))} disabled={currentRecipeIdx === 0} className="p-2 disabled:opacity-30 text-roBlue-500"><ChevronLeft size={28} /></button>
+                <div className="flex items-center justify-between mb-10 bg-stone-950/80 p-5 rounded-[2rem] border border-white/10 backdrop-blur-xl shadow-2xl">
+                  <button onClick={() => setCurrentRecipeIdx(p => Math.max(0, p - 1))} disabled={currentRecipeIdx === 0} className="p-3 disabled:opacity-20 text-roBlue-500 hover:bg-white/5 rounded-2xl transition-all"><ChevronLeft size={32} /></button>
                   <div className="text-center">
-                    <span className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em]">Propunerea {currentRecipeIdx + 1}</span>
-                    <h4 className="text-sm font-black text-roYellow-500">{currentRecipes[currentRecipeIdx].mealType}</h4>
+                    <span className="text-[9px] font-black text-stone-600 uppercase tracking-[0.4em]">Propunerea {currentRecipeIdx + 1} din {currentRecipes.length}</span>
+                    <h4 className="text-base font-black text-roYellow-400 tracking-tight">{currentRecipes[currentRecipeIdx].mealType}</h4>
                   </div>
-                  <button onClick={() => setCurrentRecipeIdx(p => Math.min(currentRecipes.length - 1, p + 1))} disabled={currentRecipeIdx === currentRecipes.length - 1} className="p-2 disabled:opacity-30 text-roRed-500"><ChevronRight size={28} /></button>
+                  <button onClick={() => setCurrentRecipeIdx(p => Math.min(currentRecipes.length - 1, p + 1))} disabled={currentRecipeIdx === currentRecipes.length - 1} className="p-3 disabled:opacity-20 text-roRed-500 hover:bg-white/5 rounded-2xl transition-all"><ChevronRight size={32} /></button>
                 </div>
               )}
+              {/* Pass the save handler correctly to ensure all recipes can be saved */}
               <RecipeCard 
                 key={currentRecipes[currentRecipeIdx].id}
                 recipe={currentRecipes[currentRecipeIdx]} 
@@ -254,7 +263,7 @@ const App = () => {
            </div>
         )}
         
-        <div className="text-center text-stone-700 text-[10px] font-bold uppercase tracking-[0.3em] mt-4 pb-12 opacity-50">
+        <div className="text-center text-stone-800 text-[10px] font-black uppercase tracking-[0.5em] mt-8 pb-16 opacity-40">
           Inspirat de Tradiția Sătmăreană
         </div>
       </div>
@@ -286,17 +295,17 @@ const App = () => {
               setShowProfileModal(false);
               showToast("Date șterse.", 'warning');
             }}
-            onLogout={() => { setUser(null); localStorage.removeItem('bucataras_current_user'); showToast("La revedere!", 'success'); }}
+            onLogout={() => { setUser(null); localStorage.removeItem('bucataras_current_user'); showToast("Deconectat!", 'success'); }}
           />
         )}
         {toast && (
-          <div className={`fixed bottom-24 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-3 animate-fade-in ${
-            toast.type === 'warning' ? 'bg-roRed-900 text-roRed-100 border border-roRed-800' :
-            toast.type === 'error' ? 'bg-roRed-950 text-roRed-200 border border-roRed-800' :
-            'bg-roBlue-950 text-white border border-roBlue-800'
+          <div className={`fixed bottom-24 left-1/2 transform -translate-x-1/2 px-8 py-4 rounded-[2rem] shadow-2xl z-50 flex items-center gap-4 animate-fade-in border-2 ${
+            toast.type === 'warning' ? 'bg-roRed-950 text-roRed-100 border-roRed-800/50' :
+            toast.type === 'error' ? 'bg-roRed-950 text-roRed-200 border-roRed-800' :
+            'bg-roBlue-950 text-white border-roBlue-800/50'
           }`}>
-             {toast.type === 'success' && <CheckCircle className="text-roYellow-500" size={18} />}
-             <span className="font-bold text-xs">{toast.message}</span>
+             {toast.type === 'success' && <CheckCircle className="text-roYellow-400" size={20} strokeWidth={3} />}
+             <span className="font-black text-[11px] uppercase tracking-widest">{toast.message}</span>
           </div>
         )}
       </div>

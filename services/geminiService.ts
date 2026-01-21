@@ -59,7 +59,7 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe[]> 
     PORȚII: ${prefs.portions}.
     TIMP LIMITĂ PER REȚETĂ: Maxim 25 minute.
     
-    Returnează un array de obiecte, câte unul pentru fiecare tip de masă cerut.
+    IMPORTANT: Returnează un array JSON valid de obiecte rețetă.
   `;
 
   try {
@@ -113,7 +113,12 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe[]> 
 
     if (response.text) {
       const data = JSON.parse(response.text) as Recipe[];
-      return data.map(r => ({ ...r, id: crypto.randomUUID(), createdAt: Date.now() }));
+      // CRITICAL FIX: Ensure every single recipe gets a fresh ID so they can be saved individually
+      return data.map(r => ({ 
+        ...r, 
+        id: crypto.randomUUID(), 
+        createdAt: Date.now() 
+      }));
     } else {
       throw new Error("Nu am primit un răspuns valid de la AI.");
     }

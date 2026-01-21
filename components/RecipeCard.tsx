@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Recipe } from '../types';
-import { Clock, Users, Flame, ChefHat, Share2, RefreshCw, Save, ImagePlus, Leaf, Info, Loader2, AlertCircle, AlertTriangle, Scale, Check, Copy } from 'lucide-react';
+import { Clock, Users, Flame, ChefHat, Share2, RefreshCw, Save, ImagePlus, Leaf, Info, Loader2, AlertTriangle, Scale, Check, Copy } from 'lucide-react';
 import { generateRecipeImage } from '../services/geminiService';
 
 interface Props {
@@ -16,6 +17,12 @@ export const RecipeCard: React.FC<Props> = ({ recipe, onReset, onSave, isSavedMo
   const [generatingImage, setGeneratingImage] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [shareState, setShareState] = useState<'idle' | 'copied'>('idle');
+
+  // Sync image URL if recipe object updates (e.g. switching between list items)
+  useEffect(() => {
+    setImageUrl(recipe.imageUrl || null);
+    setIsSaved(false); // Reset saved state visually when switching recipes
+  }, [recipe.id]);
 
   const handleGenerateImage = async () => {
     setGeneratingImage(true);
@@ -34,28 +41,20 @@ export const RecipeCard: React.FC<Props> = ({ recipe, onReset, onSave, isSavedMo
 
   const handleSave = () => {
     if (onSave) {
-      onSave({ ...recipe, imageUrl: imageUrl || undefined });
+      // Create a fresh copy to ensure all fields are captured
+      const recipeToSave = { 
+        ...recipe, 
+        imageUrl: imageUrl || undefined,
+        id: recipe.id || crypto.randomUUID() 
+      };
+      onSave(recipeToSave);
       setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 2000); 
+      // We don't timeout the success state so user knows it's definitely in their collection
     }
   };
 
   const handleShare = async () => {
-    const shareText = `🍽️ ${recipe.title}
-📝 ${recipe.description}
-
-⏱️ Timp: ${recipe.cookingTime}
-🔥 Calorii: ${recipe.caloriesPerPortion} kcal/porție
-
-🛒 Ingrediente:
-${recipe.ingredients.map(i => `• ${i}`).join('\n')}
-
-👨‍🍳 Mod de preparare:
-${recipe.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}
-
-Sfatul Sătmăreanului: ${recipe.chefTips}
-
-Generat cu Bucătărașul Sătmărean 🇷🇴`;
+    const shareText = `🍽️ ${recipe.title}\n📝 ${recipe.description}\n\n⏱️ Timp: ${recipe.cookingTime}\n🔥 Calorii: ${recipe.caloriesPerPortion} kcal/porție\n\n🛒 Ingrediente:\n${recipe.ingredients.map(i => `• ${i}`).join('\n')}\n\n👨‍🍳 Mod de preparare:\n${recipe.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nSfatul Sătmăreanului: ${recipe.chefTips}\n\nGenerat cu Bucătărașul Sătmărean 🇷🇴`;
 
     if (navigator.share) {
       try {
@@ -67,7 +66,6 @@ Generat cu Bucătărașul Sătmărean 🇷🇴`;
         console.log('Share cancelled', err);
       }
     } else {
-      // Fallback to clipboard
       try {
         await navigator.clipboard.writeText(shareText);
         setShareState('copied');
@@ -81,9 +79,9 @@ Generat cu Bucătărașul Sătmărean 🇷🇴`;
   const hasNutritionData = recipe.nutritionalDetails && recipe.nutritionalDetails.length > 0;
 
   return (
-    <div className="animate-fade-in bg-stone-900 rounded-2xl shadow-xl overflow-hidden border border-stone-800">
+    <div className="animate-fade-in bg-stone-900 rounded-[2rem] shadow-2xl overflow-hidden border border-white/5">
       {/* Dynamic Image Header */}
-      <div className="h-48 md:h-64 bg-stone-950 relative flex items-center justify-center overflow-hidden group">
+      <div className="h-56 md:h-72 bg-stone-950 relative flex items-center justify-center overflow-hidden group">
          {imageUrl ? (
            <img 
               src={imageUrl} 
@@ -91,72 +89,72 @@ Generat cu Bucătărașul Sătmărean 🇷🇴`;
               alt={recipe.title}
            />
          ) : (
-           <div className="absolute inset-0 bg-gradient-to-r from-stone-800 to-stone-900 flex flex-col items-center justify-center">
+           <div className="absolute inset-0 bg-gradient-to-r from-stone-900 to-stone-950 flex flex-col items-center justify-center">
              <div className="relative z-10 p-4 text-center">
-                <p className="text-stone-500 text-sm font-medium mb-3">Nu există imagine generată</p>
+                <ChefHat size={48} className="mx-auto mb-4 text-stone-800 opacity-50" />
                 <button 
                   onClick={handleGenerateImage}
                   disabled={generatingImage}
-                  className="flex items-center gap-2 bg-stone-800 hover:bg-stone-700 text-stone-200 px-4 py-2 rounded-full shadow-sm border border-stone-700 font-semibold text-sm transition-all transform hover:scale-105"
+                  className="flex items-center gap-2 bg-roBlue-700 hover:bg-roBlue-600 text-white px-5 py-2.5 rounded-xl shadow-xl border border-roBlue-500/30 font-bold text-sm transition-all transform hover:scale-105"
                 >
-                  {generatingImage ? <Loader2 className="animate-spin" size={16} /> : <ImagePlus size={16} />}
-                  Generează Imagine AI
+                  {generatingImage ? <Loader2 className="animate-spin" size={18} /> : <ImagePlus size={18} />}
+                  Imagine AI
                 </button>
              </div>
            </div>
          )}
          
          {/* Badge */}
-         <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur px-3 py-1 rounded-full shadow-sm text-brand-400 font-bold uppercase tracking-wider text-xs border border-brand-900/50">
-            {isSavedMode ? 'Rețetă Salvată' : 'Rețetă Generată'}
+         <div className="absolute top-6 left-6 z-10 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full shadow-lg text-roYellow-400 font-bold uppercase tracking-[0.1em] text-[10px] border border-roYellow-500/30">
+            {recipe.mealType || (isSavedMode ? 'Rețetă Salvată' : 'Rețetă Generată')}
          </div>
       </div>
 
-      <div className="p-6 md:p-8">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-4 gap-2">
-          <h2 className="text-2xl md:text-3xl font-bold text-stone-100 leading-tight">
+      <div className="p-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
+          <h2 className="text-3xl font-black text-stone-100 leading-tight tracking-tight">
             {recipe.title}
           </h2>
           <div className="flex gap-2 shrink-0">
-             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase h-fit ${
-              recipe.difficulty === 'Ușor' ? 'bg-green-900/40 text-green-400 border border-green-900' : 'bg-yellow-900/40 text-yellow-500 border border-yellow-900'
+             <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider h-fit border ${
+              recipe.difficulty === 'Ușor' ? 'bg-green-900/20 text-green-400 border-green-800/50' : 'bg-roYellow-900/20 text-roYellow-400 border-roYellow-800/50'
             }`}>
               {recipe.difficulty}
             </span>
           </div>
         </div>
 
-        <p className="text-stone-400 mb-6 italic border-l-4 border-brand-700 pl-4 py-1 bg-stone-950/50 rounded-r-lg">
+        <p className="text-stone-400 mb-8 italic border-l-4 border-roBlue-700 pl-5 py-2 bg-stone-950/40 rounded-r-2xl leading-relaxed">
           "{recipe.description}"
         </p>
 
         {/* Meta Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="flex flex-col items-center p-3 bg-stone-950 rounded-xl border border-stone-800">
-            <Clock className="text-brand-500 mb-1" size={20} />
-            <span className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">Timp</span>
-            <span className="font-bold text-stone-200">{recipe.cookingTime}</span>
+        <div className="grid grid-cols-3 gap-4 mb-10">
+          <div className="flex flex-col items-center p-4 bg-stone-950/60 rounded-2xl border border-white/5">
+            <Clock className="text-roBlue-400 mb-2" size={24} />
+            <span className="text-[9px] text-stone-600 uppercase font-black tracking-widest">Timp</span>
+            <span className="font-bold text-stone-200 text-sm">{recipe.cookingTime}</span>
           </div>
-          <div className="flex flex-col items-center p-3 bg-stone-950 rounded-xl border border-stone-800">
-            <Users className="text-brand-500 mb-1" size={20} />
-            <span className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">Porții</span>
-            <span className="font-bold text-stone-200">{recipe.portions}</span>
+          <div className="flex flex-col items-center p-4 bg-stone-950/60 rounded-2xl border border-white/5">
+            <Users className="text-roYellow-500 mb-2" size={24} />
+            <span className="text-[9px] text-stone-600 uppercase font-black tracking-widest">Porții</span>
+            <span className="font-bold text-stone-200 text-sm">{recipe.portions}</span>
           </div>
-          <div className="flex flex-col items-center p-3 bg-stone-950 rounded-xl border border-stone-800">
-            <Flame className="text-brand-500 mb-1" size={20} />
-            <span className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">Calorii</span>
-            <span className="font-bold text-stone-200">{recipe.caloriesPerPortion}</span>
+          <div className="flex flex-col items-center p-4 bg-stone-950/60 rounded-2xl border border-white/5">
+            <Flame className="text-roRed-500 mb-2" size={24} />
+            <span className="text-[9px] text-stone-600 uppercase font-black tracking-widest">Calorii</span>
+            <span className="font-bold text-stone-200 text-sm">{recipe.caloriesPerPortion}</span>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-stone-800 mb-6">
+        <div className="flex border-b border-white/5 mb-8">
           <button
             onClick={() => setActiveTab('prep')}
-            className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-colors ${
+            className={`flex-1 py-4 text-xs font-black tracking-widest uppercase flex items-center justify-center gap-2 border-b-2 transition-all ${
               activeTab === 'prep' 
-                ? 'border-brand-600 text-brand-500' 
-                : 'border-transparent text-stone-500 hover:text-stone-300'
+                ? 'border-roBlue-600 text-roBlue-400' 
+                : 'border-transparent text-stone-600 hover:text-stone-400'
             }`}
           >
             <ChefHat size={18} />
@@ -164,10 +162,10 @@ Generat cu Bucătărașul Sătmărean 🇷🇴`;
           </button>
           <button
             onClick={() => setActiveTab('nutrition')}
-            className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-colors ${
+            className={`flex-1 py-4 text-xs font-black tracking-widest uppercase flex items-center justify-center gap-2 border-b-2 transition-all ${
               activeTab === 'nutrition' 
-                ? 'border-brand-600 text-brand-500' 
-                : 'border-transparent text-stone-500 hover:text-stone-300'
+                ? 'border-roRed-600 text-roRed-400' 
+                : 'border-transparent text-stone-600 hover:text-stone-400'
             }`}
           >
             <Leaf size={18} />
@@ -176,18 +174,18 @@ Generat cu Bucătărașul Sătmărean 🇷🇴`;
         </div>
 
         {activeTab === 'prep' ? (
-          <div className="animate-fade-in grid md:grid-cols-2 gap-8">
+          <div className="animate-fade-in grid md:grid-cols-2 gap-10">
             {/* Ingredients */}
             <div>
-              <h3 className="text-lg font-bold text-stone-100 mb-4 flex items-center gap-2">
-                <span className="w-6 h-6 bg-stone-800 text-brand-500 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+              <h3 className="text-sm font-black text-stone-100 mb-6 flex items-center gap-3 uppercase tracking-wider">
+                <span className="w-7 h-7 bg-roBlue-950 text-roBlue-400 rounded-lg flex items-center justify-center text-xs border border-roBlue-800">1</span>
                 Ingrediente
               </h3>
-              <ul className="space-y-3">
+              <ul className="space-y-4">
                 {recipe.ingredients.map((ing, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-stone-300 text-sm">
-                    <div className="mt-1.5 w-1.5 h-1.5 bg-brand-600 rounded-full flex-shrink-0"></div>
-                    <span className="leading-relaxed">{ing}</span>
+                  <li key={idx} className="flex items-start gap-4 text-stone-300 text-sm group">
+                    <div className="mt-1.5 w-1.5 h-1.5 bg-roBlue-600 rounded-full flex-shrink-0 group-hover:scale-150 transition-transform"></div>
+                    <span className="leading-relaxed font-medium">{ing}</span>
                   </li>
                 ))}
               </ul>
@@ -195,17 +193,17 @@ Generat cu Bucătărașul Sătmărean 🇷🇴`;
 
             {/* Steps */}
             <div>
-              <h3 className="text-lg font-bold text-stone-100 mb-4 flex items-center gap-2">
-                <span className="w-6 h-6 bg-stone-800 text-brand-500 rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                Pași de preparare
+              <h3 className="text-sm font-black text-stone-100 mb-6 flex items-center gap-3 uppercase tracking-wider">
+                <span className="w-7 h-7 bg-roRed-950 text-roRed-400 rounded-lg flex items-center justify-center text-xs border border-roRed-800">2</span>
+                Gătire
               </h3>
-              <ol className="space-y-4">
+              <ol className="space-y-5">
                 {recipe.steps.map((step, idx) => (
-                  <li key={idx} className="flex gap-3 text-stone-300 text-sm group">
-                    <span className="font-bold text-stone-600 group-hover:text-brand-500 transition-colors min-w-[1.5rem]">
+                  <li key={idx} className="flex gap-4 text-stone-300 text-sm group">
+                    <span className="font-black text-stone-700 group-hover:text-roRed-500 transition-colors min-w-[1.2rem] text-xs">
                       {idx + 1}.
                     </span>
-                    <span className="leading-relaxed">{step}</span>
+                    <span className="leading-relaxed font-medium">{step}</span>
                   </li>
                 ))}
               </ol>
@@ -213,124 +211,88 @@ Generat cu Bucătărașul Sătmărean 🇷🇴`;
           </div>
         ) : (
           <div className="animate-fade-in">
-             <div className="bg-brand-900/20 rounded-xl p-4 border border-brand-900/50 mb-6 flex gap-3 items-start">
-                <Info className="text-brand-500 shrink-0 mt-0.5" size={20} />
-                <p className="text-sm text-brand-100/80">
-                  Valorile nutriționale sunt estimative și sunt calculate per porție medie. 
-                  {recipe.caloriesPerPortion && <span className="block mt-1 font-bold">Total: {recipe.caloriesPerPortion} kcal/porție</span>}
+             <div className="bg-roBlue-900/10 rounded-2xl p-5 border border-roBlue-900/30 mb-8 flex gap-4 items-start">
+                <Info className="text-roBlue-500 shrink-0 mt-0.5" size={24} />
+                <p className="text-xs text-roBlue-200/80 leading-relaxed font-medium">
+                  Valorile nutriționale sunt estimate per porție de specialistul nostru AI. 
+                  <span className="block mt-2 font-black text-roBlue-400">Total: {recipe.caloriesPerPortion} kcal</span>
                 </p>
              </div>
              
              {hasNutritionData ? (
                <div className="grid gap-3">
-                  {recipe.nutritionalDetails.map((item, idx) => {
-                     // Strict Validation
-                     const isCalorieValid = typeof item.calories === 'number' && item.calories > 0;
-                     const isDetailValid = typeof item.details === 'string' && item.details.trim().length > 0;
-                     const hasError = !isCalorieValid || !isDetailValid;
-
-                     if (hasError) {
-                        return (
-                          <div key={idx} className="flex items-start gap-3 p-3 bg-red-950/30 border border-red-900/50 rounded-lg">
-                            <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
-                            <div className="flex flex-col text-sm">
-                              <span className="font-bold text-stone-200">{item.ingredient || 'Ingredient Necunoscut'}</span>
-                              <div className="text-red-400 text-xs mt-1 space-y-0.5">
-                                {!isCalorieValid && <p>• Valoarea calorică trebuie să fie pozitivă.</p>}
-                                {!isDetailValid && <p>• Detaliile nutriționale lipsesc.</p>}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                     }
-
-                     return (
-                       <div key={idx} className="flex items-center justify-between p-3 bg-stone-950 border border-stone-800 rounded-lg hover:bg-stone-900 transition-colors">
-                          <div className="flex flex-col flex-1">
-                            <span className="font-semibold text-stone-200">{item.ingredient}</span>
-                            <span className="text-xs text-stone-500">{item.details}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-4">
-                            {item.value && item.unit && (
-                                <div className="flex items-center gap-1 text-xs text-stone-400 bg-stone-900 px-2 py-1 rounded">
-                                    <Scale size={12} />
-                                    <span className="font-mono text-stone-300">{item.value}{item.unit}</span>
-                                </div>
-                            )}
-                            <div className="text-right min-w-[60px]">
-                                <span className="font-bold text-brand-500">{item.calories}</span>
-                                <span className="text-xs text-stone-600 ml-1">kcal</span>
-                            </div>
-                          </div>
-                       </div>
-                     );
-                  })}
+                  {recipe.nutritionalDetails.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-stone-950/60 border border-white/5 rounded-2xl hover:bg-stone-900 transition-all">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-stone-200 text-sm">{item.ingredient}</span>
+                        <span className="text-[10px] text-stone-600 uppercase font-black">{item.details}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-black text-roBlue-400 text-lg">{item.calories}</span>
+                        <span className="text-[10px] text-stone-700 ml-1 font-black">KCAL</span>
+                      </div>
+                    </div>
+                  ))}
                </div>
              ) : (
-                <div className="text-center py-8 bg-stone-950 rounded-xl border border-stone-800 border-dashed">
-                  <p className="text-stone-500 text-sm">Nu există detalii nutriționale valide disponibile.</p>
+                <div className="text-center py-12 bg-stone-950/40 rounded-3xl border border-white/5 border-dashed">
+                  <p className="text-stone-600 text-sm font-medium">Informații nutriționale indisponibile.</p>
                 </div>
              )}
           </div>
         )}
 
         {/* Chef Tip */}
-        <div className="mt-8 bg-stone-950 border border-stone-800 rounded-xl p-4 flex gap-4">
-          <div className="relative group">
-            <div className="bg-stone-900 p-2 rounded-full h-fit shadow-sm text-amber-500 cursor-help border border-stone-800">
-               <ChefHat size={24} />
-            </div>
-            {/* Tooltip */}
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-stone-200 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20 border border-stone-800">
-              Sfatul bucătarului expert
-            </div>
+        <div className="mt-10 bg-roYellow-400/5 border border-roYellow-500/10 rounded-3xl p-6 flex gap-5">
+          <div className="bg-roYellow-500/10 p-3 rounded-2xl h-fit border border-roYellow-500/20 text-roYellow-500">
+             <ChefHat size={32} />
           </div>
           <div>
-            <h4 className="font-bold text-amber-500 text-sm mb-1">Sfatul Sătmăreanului</h4>
-            <p className="text-stone-400 text-sm italic">
+            <h4 className="font-black text-roYellow-500 text-[10px] uppercase tracking-widest mb-2">Sfatul Sătmăreanului</h4>
+            <p className="text-stone-300 text-sm italic font-medium leading-relaxed">
               "{recipe.chefTips}"
             </p>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+        <div className="mt-10 flex flex-col sm:flex-row gap-4">
           {onReset && (
             <button 
               onClick={onReset}
-              className="flex-1 flex items-center justify-center gap-2 py-3 border border-stone-700 rounded-xl text-stone-400 font-semibold hover:bg-stone-800 hover:text-stone-200 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-4 border border-stone-800 rounded-2xl text-stone-500 font-bold text-sm hover:bg-stone-800 hover:text-stone-200 transition-all"
             >
               <RefreshCw size={18} />
-              Altă Rețetă
+              Reîncepe
             </button>
           )}
           
           {onSave && !isSavedMode && (
             <button 
               onClick={handleSave}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold shadow-lg transition-all ${
+              disabled={isSaved}
+              className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm shadow-2xl transition-all transform active:scale-95 ${
                  isSaved 
-                  ? 'bg-green-700 text-white shadow-green-900/30' 
-                  : 'bg-brand-700 text-white shadow-brand-900/30 hover:bg-brand-600'
+                  ? 'bg-green-700 text-white cursor-default shadow-green-900/40 border border-green-600' 
+                  : 'bg-gradient-to-r from-roBlue-700 to-roBlue-800 text-white hover:from-roBlue-600 hover:to-roBlue-700 shadow-roBlue-900/40 border border-roBlue-500/30'
               }`}
             >
-              {isSaved ? <CheckIcon /> : <Save size={18} />}
-              {isSaved ? 'Salvat!' : 'Salvează Rețeta'}
+              {isSaved ? <Check size={20} strokeWidth={3} /> : <Save size={18} />}
+              {isSaved ? 'SALVAT ÎN COLECȚIE' : 'SALVEAZĂ REȚETA'}
             </button>
           )}
 
           {!onSave && isSavedMode && (
              <button 
                onClick={handleShare}
-               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold shadow-lg transition-all ${
+               className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm shadow-2xl transition-all transform active:scale-95 ${
                  shareState === 'copied' 
-                   ? 'bg-stone-700 text-white shadow-stone-900/30' 
-                   : 'bg-brand-700 text-white shadow-brand-900/30 hover:bg-brand-600'
+                   ? 'bg-stone-700 text-white' 
+                   : 'bg-roRed-700 text-white hover:bg-roRed-600 shadow-roRed-900/40 border border-roRed-500/30'
                }`}
              >
-               {shareState === 'copied' ? <Copy size={18} /> : <Share2 size={18} />}
-               {shareState === 'copied' ? 'Copiat!' : 'Trimite'}
+               {shareState === 'copied' ? <Check size={18} /> : <Share2 size={18} />}
+               {shareState === 'copied' ? 'COPIAT' : 'TRIMITE REȚETA'}
              </button>
           )}
         </div>
@@ -338,9 +300,3 @@ Generat cu Bucătărașul Sătmărean 🇷🇴`;
     </div>
   );
 };
-
-const CheckIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"></polyline>
-  </svg>
-);

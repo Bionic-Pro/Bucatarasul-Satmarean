@@ -6,6 +6,7 @@ import { CookingMethodSelector } from './components/CookingMethodSelector';
 import { RecipeCard } from './components/RecipeCard';
 import { SavedRecipesList } from './components/SavedRecipesList';
 import { ProfileModal } from './components/ProfileModal';
+import { AuthModal } from './components/AuthModal';
 import { generateRecipe } from './services/geminiService';
 import { Recipe, AgeGroup, MealType, UserProfile, CookingMethod } from './types';
 import { Loader2, Utensils, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -34,6 +35,7 @@ const App = () => {
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'warning'} | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -56,7 +58,7 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes';
+    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes_guest';
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) setSavedRecipes(JSON.parse(saved));
@@ -64,33 +66,40 @@ const App = () => {
     } catch (e) {}
   }, [user]);
 
-  const handleLogin = () => {
+  const handleLoginSuccess = (name: string, email: string) => {
     const newUser: UserProfile = {
       id: crypto.randomUUID(),
-      name: 'Chef Ardelean',
-      email: 'chef@satmar.ro',
-      photoURL: 'https://cdn-icons-png.flaticon.com/512/3565/3565418.png',
+      name: name,
+      email: email,
+      photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
       preferences: {
-        allergens: allergens,
-        avoidIngredients: avoidIngredients
+        allergens: [],
+        avoidIngredients: ''
       }
     };
     setUser(newUser);
     localStorage.setItem('bucataras_current_user', JSON.stringify(newUser));
+    setShowAuthModal(false);
     showToast(`Bine ai venit, ${newUser.name}!`, 'success');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('bucataras_current_user');
+    setSavedRecipes([]);
+    setView('generator');
+    setShowProfileModal(false);
+    showToast("Te-ai deconectat cu succes.", 'success');
   };
 
   const handleUpdateUser = (updatedUser: UserProfile) => {
     setUser(updatedUser);
     localStorage.setItem('bucataras_current_user', JSON.stringify(updatedUser));
-    
-    // Sync local state with updated profile preferences
     if (updatedUser.preferences) {
       setAllergens(updatedUser.preferences.allergens || []);
       setAvoidIngredients(updatedUser.preferences.avoidIngredients || '');
     }
-    
-    showToast("Profil actualizat cu succes!", "success");
+    showToast("Profil actualizat!", "success");
   };
 
   const handleToggleIngredient = (name: string) => {
@@ -101,7 +110,7 @@ const App = () => {
 
   const handleGenerate = async () => {
     if (selectedIngredients.length === 0) {
-      setError("Te rugăm să alegi ingredientele!");
+      setError("Alege ingredientele!");
       return;
     }
     setLoading(true);
@@ -123,26 +132,21 @@ const App = () => {
       setView('generator');
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     } catch (err: any) {
-      setError("A apărut o eroare. Încearcă din nou!");
+      setError("Eroare de conexiune. Încearcă din nou!");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSaveRecipe = (recipeToSave: Recipe) => {
-    // Check if a recipe with this specific ID or Title already exists to avoid duplication
     const exists = savedRecipes.find(r => r.id === recipeToSave.id || r.title === recipeToSave.title);
-    
     let updatedList;
     if (exists) {
-      updatedList = savedRecipes.map(r => 
-        (r.id === exists.id || r.title === exists.title) ? { ...recipeToSave, id: r.id } : r
-      );
+      updatedList = savedRecipes.map(r => (r.id === exists.id || r.title === exists.title) ? { ...recipeToSave, id: r.id } : r);
     } else {
       updatedList = [recipeToSave, ...savedRecipes];
     }
-    
-    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes';
+    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes_guest';
     localStorage.setItem(storageKey, JSON.stringify(updatedList));
     setSavedRecipes(updatedList);
     showToast(`${recipeToSave.title} salvată!`, 'success');
@@ -150,7 +154,7 @@ const App = () => {
 
   const handleDeleteRecipe = (id: string) => {
     const updatedList = savedRecipes.filter(r => r.id !== id);
-    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes';
+    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes_guest';
     localStorage.setItem(storageKey, JSON.stringify(updatedList));
     setSavedRecipes(updatedList);
     if (selectedSavedRecipe?.id === id) {
@@ -198,35 +202,20 @@ const App = () => {
           onRemoveCustom={(n) => { setCustomIngredients(p => p.filter(i => i !== n)); setSelectedIngredients(p => p.filter(i => i !== n)); }}
         />
 
-        <CookingMethodSelector 
-          selectedMethod={cookingMethod}
-          onSelect={setCookingMethod}
-        />
+        <CookingMethodSelector selectedMethod={cookingMethod} onSelect={setCookingMethod} />
 
         <PreferenceSelector 
-          ageGroup={ageGroup}
-          setAgeGroup={setAgeGroup}
-          mealTypes={mealTypes}
-          setMealTypes={setMealTypes}
-          hideVeggies={hideVeggies}
-          setHideVeggies={setHideVeggies}
-          portions={portions}
-          setPortions={setPortions}
-          avoidIngredients={avoidIngredients}
-          setAvoidIngredients={setAvoidIngredients}
-          allergens={allergens}
-          setAllergens={setAllergens}
-          spices={spices}
-          setSpices={setSpices}
-          user={user}
-          onUpdateUser={handleUpdateUser}
+          ageGroup={ageGroup} setAgeGroup={setAgeGroup}
+          mealTypes={mealTypes} setMealTypes={setMealTypes}
+          hideVeggies={hideVeggies} setHideVeggies={setHideVeggies}
+          portions={portions} setPortions={setPortions}
+          avoidIngredients={avoidIngredients} setAvoidIngredients={setAvoidIngredients}
+          allergens={allergens} setAllergens={setAllergens}
+          spices={spices} setSpices={setSpices}
+          user={user} onUpdateUser={handleUpdateUser}
         />
 
-        {error && (
-          <div className="bg-roRed-900/20 text-roRed-400 p-4 rounded-2xl text-xs font-bold border border-roRed-900/40 text-center">
-            {error}
-          </div>
-        )}
+        {error && <div className="bg-roRed-900/20 text-roRed-400 p-4 rounded-2xl text-xs font-bold border border-roRed-900/40 text-center">{error}</div>}
 
         <div className="sticky bottom-6 z-20 pb-4">
           <button
@@ -240,11 +229,7 @@ const App = () => {
                   : 'bg-gradient-to-r from-roBlue-700 via-roYellow-600 to-roRed-700 text-white shadow-stone-950 border-white/20 hover:brightness-110'
             }`}
           >
-            {loading ? (
-              <><Loader2 className="animate-spin" /> Pregătim bunătățile...</>
-            ) : (
-              <><Utensils className={selectedIngredients.length > 0 ? "animate-bounce" : ""} /> Generează Gustul Ardelenesc</>
-            )}
+            {loading ? <><Loader2 className="animate-spin" /> Pregătim...</> : <><Utensils className={selectedIngredients.length > 0 ? "animate-bounce" : ""} /> Generează Gustul Ardelenesc</>}
           </button>
         </div>
         
@@ -260,19 +245,9 @@ const App = () => {
                   <button onClick={() => setCurrentRecipeIdx(p => Math.min(currentRecipes.length - 1, p + 1))} disabled={currentRecipeIdx === currentRecipes.length - 1} className="p-3 disabled:opacity-20 text-roRed-500 hover:bg-white/5 rounded-2xl transition-all"><ChevronRight size={32} /></button>
                 </div>
               )}
-              {/* Pass the save handler correctly to ensure all recipes can be saved */}
-              <RecipeCard 
-                key={currentRecipes[currentRecipeIdx].id}
-                recipe={currentRecipes[currentRecipeIdx]} 
-                onReset={handleReset} 
-                onSave={handleSaveRecipe}
-              />
+              <RecipeCard key={currentRecipes[currentRecipeIdx].id} recipe={currentRecipes[currentRecipeIdx]} onReset={handleReset} onSave={handleSaveRecipe} />
            </div>
         )}
-        
-        <div className="text-center text-stone-800 text-[10px] font-black uppercase tracking-[0.5em] mt-8 pb-16 opacity-40">
-          Inspirat de Tradiția Sătmăreană
-        </div>
       </div>
     );
   };
@@ -285,24 +260,27 @@ const App = () => {
           onGoHome={() => { setView('generator'); handleReset(); }}
           isSavedView={view === 'saved' || view === 'details'}
           user={user}
-          onLogin={handleLogin} 
+          onLogin={() => setShowAuthModal(true)} 
           onOpenProfile={() => setShowProfileModal(true)}
           savedCount={savedRecipes.length}
         />
         {renderContent()}
         {showProfileModal && user && (
           <ProfileModal 
-            user={user}
-            onClose={() => setShowProfileModal(false)}
+            user={user} onClose={() => setShowProfileModal(false)}
             onUpdate={handleUpdateUser}
             onDelete={() => {
-              localStorage.removeItem('bucataras_current_user');
-              localStorage.removeItem(`bucataras_recipes_${user.id}`);
-              setUser(null);
-              setShowProfileModal(false);
-              showToast("Date șterse.", 'warning');
+              const storageKey = `bucataras_recipes_${user.id}`;
+              localStorage.removeItem(storageKey);
+              handleLogout();
             }}
-            onLogout={() => { setUser(null); localStorage.removeItem('bucataras_current_user'); showToast("Deconectat!", 'success'); }}
+            onLogout={handleLogout}
+          />
+        )}
+        {showAuthModal && (
+          <AuthModal 
+            onClose={() => setShowAuthModal(false)}
+            onSuccess={handleLoginSuccess}
           />
         )}
         {toast && (

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserProfile } from '../types';
-import { UserCircle, Save, Trash2, X, AlertTriangle, ShieldCheck, Mail } from 'lucide-react';
+import { UserCircle, Save, Trash2, X, AlertTriangle, ShieldCheck, Mail, Ban, Settings2, BellRing } from 'lucide-react';
+import { COMMON_ALLERGENS } from '../constants';
 
 interface Props {
   user: UserProfile;
@@ -11,122 +12,194 @@ interface Props {
 }
 
 export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelete, onLogout }) => {
+  const [activeTab, setActiveTab] = useState<'cont' | 'preferinte'>('cont');
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
+  const [allergens, setAllergens] = useState<string[]>(user.preferences.allergens || []);
+  const [avoidIngredients, setAvoidIngredients] = useState(user.preferences.avoidIngredients || '');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdate({ ...user, name, email });
+    onUpdate({ 
+      ...user, 
+      name, 
+      email, 
+      preferences: { 
+        ...user.preferences, 
+        allergens, 
+        avoidIngredients 
+      } 
+    });
     onClose();
   };
 
+  const toggleAllergen = (label: string) => {
+    setAllergens(prev => 
+      prev.includes(label) ? prev.filter(a => a !== label) : [...prev, label]
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-stone-900 w-full max-w-md rounded-3xl border border-stone-800 shadow-2xl overflow-hidden relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-stone-900 w-full max-w-lg rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden relative">
         
-        {/* Header */}
-        <div className="bg-stone-950 p-6 flex justify-between items-center border-b border-stone-800">
+        {/* Header with Romanian colors indicator */}
+        <div className="bg-stone-950 p-6 flex justify-between items-center border-b border-white/5 relative">
+          <div className="absolute top-0 left-0 w-full h-1 flex">
+             <div className="flex-1 bg-roBlue-600"></div>
+             <div className="flex-1 bg-roYellow-500"></div>
+             <div className="flex-1 bg-roRed-600"></div>
+          </div>
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-brand-900/50 flex items-center justify-center text-brand-400 border border-brand-800">
+             <div className="w-10 h-10 rounded-full bg-roBlue-950/50 flex items-center justify-center text-roBlue-400 border border-roBlue-800/50">
                 <UserCircle size={24} />
              </div>
              <div>
-                <h2 className="text-lg font-bold text-stone-100">Profilul Meu</h2>
-                <p className="text-xs text-stone-500">Gestionează setările contului</p>
+                <h2 className="text-lg font-black text-stone-100 uppercase tracking-tight">Profil Bucătar</h2>
+                <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">Personalizează experiența</p>
              </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-stone-800 rounded-full transition-colors text-stone-400 hover:text-stone-200">
+          <button onClick={onClose} className="p-2 hover:bg-stone-800 rounded-full transition-colors text-stone-400">
             <X size={20} />
           </button>
         </div>
 
+        {/* Tab Switcher */}
+        <div className="flex bg-stone-950/50 p-1 border-b border-white/5">
+           <button 
+             onClick={() => setActiveTab('cont')}
+             className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${activeTab === 'cont' ? 'bg-stone-800 text-roBlue-400' : 'text-stone-600'}`}
+           >
+             Setări Cont
+           </button>
+           <button 
+             onClick={() => setActiveTab('preferinte')}
+             className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${activeTab === 'preferinte' ? 'bg-stone-800 text-roYellow-500' : 'text-stone-600'}`}
+           >
+             Preferințe Salvate
+           </button>
+        </div>
+
         {/* Body */}
-        <div className="p-6">
+        <div className="p-8">
           {!confirmDelete ? (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5">Nume</label>
-                  <input 
-                    type="text" 
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-stone-950 border border-stone-800 rounded-xl px-4 py-3 text-stone-200 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                    Email <span className="opacity-50 font-normal normal-case">(Simulat)</span>
-                  </label>
-                  <div className="relative">
-                    <Mail size={16} className="absolute left-3 top-3.5 text-stone-600" />
-                    <input 
-                      type="email" 
-                      value={email}
-                      disabled
-                      className="w-full bg-stone-950/50 border border-stone-800 rounded-xl pl-10 pr-4 py-3 text-stone-400 cursor-not-allowed"
-                    />
+              {activeTab === 'cont' ? (
+                <div className="space-y-6 animate-fade-in">
+                  <div className="grid gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-2">Nume Afișat</label>
+                      <input 
+                        type="text" 
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full bg-stone-950 border border-stone-800 rounded-2xl px-5 py-3.5 text-stone-200 text-sm focus:border-roBlue-500/50 outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-2">Adresă Email</label>
+                      <div className="relative">
+                        <Mail size={16} className="absolute left-4 top-4 text-stone-700" />
+                        <input 
+                          type="email" 
+                          value={email}
+                          disabled
+                          className="w-full bg-stone-950/50 border border-stone-800 rounded-2xl pl-12 pr-5 py-3.5 text-stone-500 text-sm cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-roBlue-950/10 rounded-2xl p-5 border border-roBlue-900/20 flex gap-4">
+                     <ShieldCheck className="text-roBlue-500 shrink-0" size={24} />
+                     <div>
+                        <p className="font-black text-roBlue-100 text-[11px] uppercase mb-1">Securitate Date</p>
+                        <p className="text-[10px] text-stone-500 leading-relaxed font-medium">Informațiile tale sunt stocate local pe acest dispozitiv și nu sunt partajate cu terți.</p>
+                     </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-6 animate-fade-in">
+                  <div>
+                    <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-3">Alergeni Activi</label>
+                    <div className="flex flex-wrap gap-2">
+                       {COMMON_ALLERGENS.map(alg => (
+                         <button
+                           key={alg.id}
+                           type="button"
+                           onClick={() => toggleAllergen(alg.label)}
+                           className={`px-3 py-1.5 rounded-full text-[10px] font-black border transition-all ${
+                             allergens.includes(alg.label) 
+                               ? 'bg-roRed-900/40 border-roRed-500 text-roRed-100' 
+                               : 'bg-stone-950 border-stone-800 text-stone-700'
+                           }`}
+                         >
+                           {alg.label}
+                         </button>
+                       ))}
+                    </div>
+                  </div>
 
-              {/* Stats/Info Badge */}
-              <div className="bg-stone-800/30 rounded-xl p-4 border border-stone-800 flex gap-4">
-                 <ShieldCheck className="text-brand-500 shrink-0" size={20} />
-                 <div className="text-xs text-stone-400">
-                    <p className="font-bold text-stone-300 mb-1">Preferințe Salvate</p>
-                    <p>Alergenii și ingredientele de evitat sunt memorate automat pentru acest profil.</p>
-                 </div>
-              </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-3">Ingrediente Evitate Automat</label>
+                    <input 
+                      type="text"
+                      value={avoidIngredients}
+                      onChange={(e) => setAvoidIngredients(e.target.value)}
+                      placeholder="Separați prin virgulă..."
+                      className="w-full bg-stone-950 border border-stone-800 rounded-2xl px-5 py-3.5 text-stone-200 text-sm focus:border-roYellow-500/50 outline-none transition-all"
+                    />
+                    <p className="text-[9px] text-stone-600 mt-2 font-bold uppercase tracking-tighter italic">Acestea vor fi excluse din orice rețetă generată.</p>
+                  </div>
+                </div>
+              )}
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-4">
                 <button 
                   type="button" 
                   onClick={onLogout}
-                  className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-xl font-semibold text-sm transition-colors border border-stone-700"
+                  className="px-6 py-4 bg-stone-800 hover:bg-stone-700 text-stone-400 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
                 >
-                  Deconectare
+                  Ieșire
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-[2] py-3 bg-brand-700 hover:bg-brand-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-900/30 flex items-center justify-center gap-2"
+                  className="flex-1 py-4 bg-gradient-to-r from-roBlue-700 to-roBlue-800 hover:from-roBlue-600 hover:to-roBlue-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-roBlue-950/50 flex items-center justify-center gap-2 border border-roBlue-500/30"
                 >
-                  <Save size={16} /> Salvează Modificări
+                  <Save size={16} /> Salvează Tot
                 </button>
               </div>
 
-              <div className="border-t border-stone-800 pt-4 mt-2">
-                 <button 
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className="flex items-center gap-2 text-red-500 hover:text-red-400 text-xs font-bold transition-colors mx-auto"
-                 >
-                    <Trash2 size={14} /> Șterge Profilul Definitiv
-                 </button>
-              </div>
+              <button 
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="w-full py-2 text-roRed-500 hover:text-roRed-400 text-[9px] font-black uppercase tracking-[0.2em] transition-colors mt-4"
+              >
+                Șterge contul și toate datele
+              </button>
             </form>
           ) : (
-            <div className="text-center py-4 animate-fade-in">
-              <div className="w-16 h-16 bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-900/50">
-                 <AlertTriangle size={32} />
+            <div className="text-center py-6 animate-fade-in">
+              <div className="w-20 h-20 bg-roRed-950/20 text-roRed-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-roRed-500/20">
+                 <AlertTriangle size={40} />
               </div>
-              <h3 className="text-xl font-bold text-stone-100 mb-2">Ești sigur?</h3>
-              <p className="text-stone-400 text-sm mb-6 max-w-xs mx-auto">
-                Această acțiune va șterge profilul <strong>{user.name}</strong> și toate rețetele salvate asociate acestuia. Nu se poate anula.
+              <h3 className="text-2xl font-black text-stone-100 mb-3 tracking-tight uppercase">Confirmă Ștergerea</h3>
+              <p className="text-stone-500 text-xs mb-8 max-w-xs mx-auto font-medium leading-relaxed">
+                Această acțiune va șterge definitiv profilul <span className="text-stone-300 font-bold">{user.name}</span> și toate rețetele tale salvate.
               </p>
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                  <button 
                    onClick={() => setConfirmDelete(false)}
-                   className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-xl font-bold text-sm"
+                   className="flex-1 py-4 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-2xl font-black text-[10px] uppercase tracking-widest"
                  >
                    Anulează
                  </button>
                  <button 
                    onClick={onDelete}
-                   className="flex-1 py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-900/30"
+                   className="flex-1 py-4 bg-roRed-700 hover:bg-roRed-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-roRed-900/40"
                  >
-                   Da, Șterge Tot
+                   Confirmă
                  </button>
               </div>
             </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Hero } from './components/Hero';
 import { IngredientSelector } from './components/IngredientSelector';
@@ -84,6 +83,14 @@ const App = () => {
   const handleUpdateUser = (updatedUser: UserProfile) => {
     setUser(updatedUser);
     localStorage.setItem('bucataras_current_user', JSON.stringify(updatedUser));
+    
+    // Sync local state with updated profile preferences
+    if (updatedUser.preferences) {
+      setAllergens(updatedUser.preferences.allergens || []);
+      setAvoidIngredients(updatedUser.preferences.avoidIngredients || '');
+    }
+    
+    showToast("Profil actualizat cu succes!", "success");
   };
 
   const handleToggleIngredient = (name: string) => {
@@ -229,7 +236,7 @@ const App = () => {
               loading 
                 ? 'bg-stone-800 text-stone-500 cursor-not-allowed border-stone-900'
                 : selectedIngredients.length === 0 
-                  ? 'bg-stone-900/80 text-stone-600 border-stone-800' 
+                  ? 'bg-stone-900/80 text-stone-600 border border-stone-800' 
                   : 'bg-gradient-to-r from-roBlue-700 via-roYellow-600 to-roRed-700 text-white shadow-stone-950 border-white/20 hover:brightness-110'
             }`}
           >

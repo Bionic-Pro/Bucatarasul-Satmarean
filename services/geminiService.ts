@@ -4,11 +4,14 @@ import { Recipe, UserPreferences, NutritionalDetail } from "../types";
 import { COOKING_METHODS_LIST } from "../constants";
 
 const createClient = () => {
-  const apiKey = process.env.API_KEY;
+  // Verifică prioritar variabila de mediu injectată de platforma de hosting (Vercel, Netlify, etc.)
+  const apiKey = process.env.API_KEY || (window as any)._env_?.API_KEY;
+  
   if (!apiKey) {
-    console.error("API Key is missing!");
+    console.warn("Atenție: Cheia API lipsește. Aplicația va solicita utilizatorului să își folosească propria cheie pentru testare.");
   }
-  return new GoogleGenAI({ apiKey: apiKey || 'DUMMY_KEY' });
+  
+  return new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
 };
 
 export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe[]> => {
@@ -113,7 +116,6 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe[]> 
 
     if (response.text) {
       const data = JSON.parse(response.text) as Recipe[];
-      // CRITICAL FIX: Ensure every single recipe gets a fresh ID so they can be saved individually
       return data.map(r => ({ 
         ...r, 
         id: crypto.randomUUID(), 
@@ -122,9 +124,13 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe[]> 
     } else {
       throw new Error("Nu am primit un răspuns valid de la AI.");
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error("A apărut o eroare la generarea rețetelor.");
+    // Dacă eroarea este legată de lipsa cheii, forțăm dialogul de selecție dacă suntem în mediul AI Studio
+    if (error.message?.includes("Requested entity was not found") && window.aistudio?.openSelectKey) {
+      window.aistudio.openSelectKey();
+    }
+    throw new Error("Eroare la generare. Verifică setările API în Profil.");
   }
 };
 

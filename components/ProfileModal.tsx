@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
-import { UserCircle, Save, Trash2, X, AlertTriangle, ShieldCheck, Mail, Ban, Settings2, BellRing } from 'lucide-react';
+import { UserCircle, Save, Trash2, X, AlertTriangle, ShieldCheck, Mail, Key, Settings2, ExternalLink } from 'lucide-react';
 import { COMMON_ALLERGENS } from '../constants';
 
 interface Props {
@@ -12,12 +12,37 @@ interface Props {
 }
 
 export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelete, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'cont' | 'preferinte'>('cont');
+  const [activeTab, setActiveTab] = useState<'cont' | 'preferinte' | 'api'>('cont');
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [allergens, setAllergens] = useState<string[]>(user.preferences.allergens || []);
   const [avoidIngredients, setAvoidIngredients] = useState(user.preferences.avoidIngredients || '');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      const aiStudio = (window as any).aistudio;
+      if (aiStudio?.hasSelectedApiKey) {
+        try {
+          const selected = await aiStudio.hasSelectedApiKey();
+          setHasKey(selected);
+        } catch (e) {
+          console.error("Eroare la verificarea cheii:", e);
+        }
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    const aiStudio = (window as any).aistudio;
+    if (aiStudio?.openSelectKey) {
+      await aiStudio.openSelectKey();
+      // Presupunem succesul conform regulilor de race condition
+      setHasKey(true);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,13 +96,19 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
              onClick={() => setActiveTab('cont')}
              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${activeTab === 'cont' ? 'bg-stone-800 text-roBlue-400' : 'text-stone-600'}`}
            >
-             Setări Cont
+             Cont
            </button>
            <button 
              onClick={() => setActiveTab('preferinte')}
              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${activeTab === 'preferinte' ? 'bg-stone-800 text-roYellow-500' : 'text-stone-600'}`}
            >
-             Preferințe Salvate
+             Preferințe
+           </button>
+           <button 
+             onClick={() => setActiveTab('api')}
+             className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${activeTab === 'api' ? 'bg-stone-800 text-roRed-500' : 'text-stone-600'}`}
+           >
+             API
            </button>
         </div>
 
@@ -85,44 +116,32 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
         <div className="p-8">
           {!confirmDelete ? (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {activeTab === 'cont' ? (
+              {activeTab === 'cont' && (
                 <div className="space-y-6 animate-fade-in">
-                  <div className="grid gap-4">
-                    <div>
-                      <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-2">Nume Afișat</label>
-                      <input 
-                        type="text" 
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full bg-stone-950 border border-stone-800 rounded-2xl px-5 py-3.5 text-stone-200 text-sm focus:border-roBlue-500/50 outline-none transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-2">Adresă Email</label>
-                      <div className="relative">
-                        <Mail size={16} className="absolute left-4 top-4 text-stone-700" />
-                        <input 
-                          type="email" 
-                          value={email}
-                          disabled
-                          className="w-full bg-stone-950/50 border border-stone-800 rounded-2xl pl-12 pr-5 py-3.5 text-stone-500 text-sm cursor-not-allowed"
-                        />
-                      </div>
-                    </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-2">Nume Afișat</label>
+                    <input 
+                      type="text" 
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full bg-stone-950 border border-stone-800 rounded-2xl px-5 py-3.5 text-stone-200 text-sm focus:border-roBlue-500/50 outline-none transition-all"
+                    />
                   </div>
                   
                   <div className="bg-roBlue-950/10 rounded-2xl p-5 border border-roBlue-900/20 flex gap-4">
                      <ShieldCheck className="text-roBlue-500 shrink-0" size={24} />
                      <div>
                         <p className="font-black text-roBlue-100 text-[11px] uppercase mb-1">Securitate Date</p>
-                        <p className="text-[10px] text-stone-500 leading-relaxed font-medium">Informațiile tale sunt stocate local pe acest dispozitiv și nu sunt partajate cu terți.</p>
+                        <p className="text-[10px] text-stone-500 leading-relaxed font-medium">Informațiile sunt salvate doar pe dispozitivul tău.</p>
                      </div>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {activeTab === 'preferinte' && (
                 <div className="space-y-6 animate-fade-in">
                   <div>
-                    <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-3">Alergeni Activi</label>
+                    <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-3">Alergeni Salvați</label>
                     <div className="flex flex-wrap gap-2">
                        {COMMON_ALLERGENS.map(alg => (
                          <button
@@ -142,7 +161,7 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-3">Ingrediente Evitate Automat</label>
+                    <label className="block text-[10px] font-black text-stone-600 uppercase tracking-widest mb-3">Evită Automat</label>
                     <input 
                       type="text"
                       value={avoidIngredients}
@@ -150,8 +169,38 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
                       placeholder="Separați prin virgulă..."
                       className="w-full bg-stone-950 border border-stone-800 rounded-2xl px-5 py-3.5 text-stone-200 text-sm focus:border-roYellow-500/50 outline-none transition-all"
                     />
-                    <p className="text-[9px] text-stone-600 mt-2 font-bold uppercase tracking-tighter italic">Acestea vor fi excluse din orice rețetă generată.</p>
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'api' && (
+                <div className="space-y-6 animate-fade-in text-center">
+                   <div className="w-16 h-16 bg-stone-950 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/5 shadow-inner">
+                      <Key className={hasKey ? "text-green-500" : "text-roRed-500"} size={32} />
+                   </div>
+                   <h3 className="text-sm font-black text-stone-100 uppercase tracking-widest">Configurare AI</h3>
+                   <p className="text-[11px] text-stone-500 leading-relaxed max-w-xs mx-auto">
+                     Aplicația folosește modelele Gemini Pro și Veo. Asigură-te că proiectul tău are billing activ.
+                   </p>
+                   
+                   <div className="grid gap-3">
+                     <button 
+                       type="button"
+                       onClick={handleSelectKey}
+                       className="w-full py-4 bg-stone-800 hover:bg-stone-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all border border-white/5 flex items-center justify-center gap-2"
+                     >
+                        <Key size={16} /> {hasKey ? "Schimbă Cheia API" : "Selectează Cheia API"}
+                     </button>
+                     
+                     <a 
+                       href="https://ai.google.dev/gemini-api/docs/billing" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="text-[10px] font-black text-roBlue-400 uppercase tracking-widest hover:underline flex items-center justify-center gap-1"
+                     >
+                       Documentație Plată <ExternalLink size={12} />
+                     </a>
+                   </div>
                 </div>
               )}
 
@@ -167,40 +216,22 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
                   type="submit" 
                   className="flex-1 py-4 bg-gradient-to-r from-roBlue-700 to-roBlue-800 hover:from-roBlue-600 hover:to-roBlue-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-roBlue-950/50 flex items-center justify-center gap-2 border border-roBlue-500/30"
                 >
-                  <Save size={16} /> Salvează Tot
+                  <Save size={16} /> Salvează
                 </button>
               </div>
-
-              <button 
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className="w-full py-2 text-roRed-500 hover:text-roRed-400 text-[9px] font-black uppercase tracking-[0.2em] transition-colors mt-4"
-              >
-                Șterge contul și toate datele
-              </button>
             </form>
           ) : (
             <div className="text-center py-6 animate-fade-in">
               <div className="w-20 h-20 bg-roRed-950/20 text-roRed-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-roRed-500/20">
                  <AlertTriangle size={40} />
               </div>
-              <h3 className="text-2xl font-black text-stone-100 mb-3 tracking-tight uppercase">Confirmă Ștergerea</h3>
-              <p className="text-stone-500 text-xs mb-8 max-w-xs mx-auto font-medium leading-relaxed">
-                Această acțiune va șterge definitiv profilul <span className="text-stone-300 font-bold">{user.name}</span> și toate rețetele tale salvate.
+              <h3 className="text-2xl font-black text-stone-100 mb-3 uppercase">Confirmă Ștergerea</h3>
+              <p className="text-stone-500 text-xs mb-8 max-w-xs mx-auto">
+                Vei șterge profilul și toate rețetele salvate.
               </p>
               <div className="flex gap-4">
-                 <button 
-                   onClick={() => setConfirmDelete(false)}
-                   className="flex-1 py-4 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-2xl font-black text-[10px] uppercase tracking-widest"
-                 >
-                   Anulează
-                 </button>
-                 <button 
-                   onClick={onDelete}
-                   className="flex-1 py-4 bg-roRed-700 hover:bg-roRed-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-roRed-900/40"
-                 >
-                   Confirmă
-                 </button>
+                 <button onClick={() => setConfirmDelete(false)} className="flex-1 py-4 bg-stone-800 text-stone-200 rounded-2xl font-black text-[10px] uppercase">Anulează</button>
+                 <button onClick={onDelete} className="flex-1 py-4 bg-roRed-700 text-white rounded-2xl font-black text-[10px] uppercase">Șterge</button>
               </div>
             </div>
           )}

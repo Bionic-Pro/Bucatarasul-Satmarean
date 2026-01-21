@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#14532d" />
+    <meta name="theme-color" content="#1e3a8a" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/manifest.json">
@@ -19,31 +19,41 @@
               sans: ['Inter', 'sans-serif'],
             },
             colors: {
+              roBlue: {
+                50: '#eff6ff',
+                100: '#dbeafe',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8',
+                800: '#1e40af',
+                900: '#1e3a8a',
+                950: '#172554',
+              },
+              roYellow: {
+                50: '#fffdf0',
+                100: '#fff9c4',
+                400: '#fde047',
+                500: '#facc15', // Pure yellow for better contrast
+                600: '#eab308',
+                700: '#ca8a04',
+                800: '#a16207',
+                900: '#854d0e',
+                950: '#422006',
+              },
+              roRed: {
+                50: '#fef2f2',
+                100: '#fee2e2',
+                500: '#ef4444',
+                600: '#dc2626',
+                700: '#b91c1c',
+                800: '#991b1b',
+                900: '#7f1d1d',
+                950: '#450a0a',
+              },
               brand: {
                 50: '#f0fdf4',
-                100: '#dcfce7',
                 500: '#22c55e',
-                600: '#16a34a',
-                700: '#15803d',
-                800: '#166534',
                 900: '#14532d',
-                950: '#052e16',
-              },
-              stone: {
-                 50: '#fafaf9',
-                 100: '#f5f5f4',
-                 200: '#e7e5e4',
-                 300: '#d6d3d1',
-                 400: '#a8a29e',
-                 500: '#78716c',
-                 600: '#57534e',
-                 700: '#44403c',
-                 800: '#292524',
-                 900: '#1c1917',
-                 950: '#0c0a09',
-              },
-              accent: {
-                500: '#f97316', // Orange for appetite
               }
             }
           }
@@ -54,14 +64,12 @@
       body {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        background-color: #0c0a09; /* Stone-950 */
+        background-color: #0c0a09;
         color: #f5f5f4;
-        background-image: radial-gradient(#292524 1px, transparent 1px);
-        background-size: 24px 24px;
-        background-position: 0 0;
+        background-image: radial-gradient(#1c1917 1px, transparent 1px);
+        background-size: 32px 32px;
         background-attachment: fixed;
       }
-      /* Soften the pattern opacity */
       body::before {
         content: "";
         position: fixed;
@@ -69,48 +77,30 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(12, 10, 9, 0.94); /* Dark Overlay */
+        background: radial-gradient(circle at 50% 50%, rgba(30, 58, 138, 0.05) 0%, rgba(0,0,0,0) 70%);
+        pointer-events: none;
         z-index: -1;
       }
-      /* Custom Scrollbar for Dark Mode */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #1c1917; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #44403c; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #57534e; 
-      }
+      .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: #0c0a09; }
+      ::-webkit-scrollbar-thumb { background: #292524; border-radius: 10px; }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
-  }
-}
-</script>
-</head>
+    <script type="importmap">
+    {
+      "imports": {
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "react": "https://esm.sh/react@^19.2.3",
+        "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+        "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+      }
+    }
+    </script>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    <script>
-      // Register Service Worker if supported (Basic)
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          // Typically we would register a sw.js here, but for this demo 
-          // we rely on manifest availability for "Add to Home Screen"
-        });
-      }
-    </script>
   </body>
 </html>

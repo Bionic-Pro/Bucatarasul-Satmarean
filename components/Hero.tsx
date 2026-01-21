@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChefHat, Clock, BookHeart, ArrowLeft, Download, UserCircle, LogIn } from 'lucide-react';
+import { ChefHat, Clock, BookHeart, ArrowLeft, Download, UserCircle } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   user: UserProfile | null;
   onLogin: () => void;
   onOpenProfile: () => void;
+  savedCount: number;
 }
 
 const GoogleIcon = () => (
@@ -30,28 +31,32 @@ export const Hero: React.FC<Props> = ({
   canInstall,
   user,
   onLogin,
-  onOpenProfile
+  onOpenProfile,
+  savedCount
 }) => {
   return (
-    <div className="bg-gradient-to-r from-brand-900 to-brand-950 text-white p-8 rounded-b-[2rem] shadow-2xl shadow-black/50 mb-8 relative overflow-hidden transition-all duration-500 border-b border-brand-800">
-      <div className="absolute top-0 right-0 opacity-5 transform translate-x-10 -translate-y-10">
-        <ChefHat size={150} />
+    <div className="relative p-8 rounded-b-[2.5rem] shadow-2xl mb-8 overflow-hidden transition-all duration-500 border-b border-white/5">
+      {/* Romanian Flag Tri-Gradient Background - Brightened Yellow */}
+      <div className="absolute inset-0 flex">
+        <div className="w-1/3 h-full bg-roBlue-950/40"></div>
+        <div className="w-1/3 h-full bg-roYellow-400/20"></div>
+        <div className="w-1/3 h-full bg-roRed-950/40"></div>
       </div>
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-stone-950/80"></div>
       
       <div className="relative z-10">
-        {/* Top Controls: Install + Auth */}
         <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <span className="bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase border border-brand-700/50 text-brand-100">
+            <span className="bg-roBlue-900/40 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-roBlue-500/30 text-roBlue-100">
               Satu Mare, România
             </span>
             {canInstall && (
               <button 
                 onClick={onInstall}
-                className="flex items-center gap-1 bg-brand-500 text-brand-950 px-3 py-1 rounded-full text-xs font-bold hover:bg-brand-400 transition-colors shadow-lg shadow-brand-500/20"
+                className="flex items-center gap-1 bg-roYellow-400 text-roYellow-950 px-3 py-1 rounded-full text-[10px] font-bold hover:bg-roYellow-300 transition-colors shadow-lg shadow-roYellow-500/20"
               >
-                <Download size={12} />
-                App
+                <Download size={10} />
+                Instalează
               </button>
             )}
           </div>
@@ -60,69 +65,56 @@ export const Hero: React.FC<Props> = ({
              {user ? (
                <button 
                  onClick={onOpenProfile}
-                 className="flex items-center gap-2 bg-stone-800/80 hover:bg-stone-700 text-white px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border border-stone-700 backdrop-blur-sm shadow-lg"
+                 className="flex items-center gap-2 bg-stone-900/60 hover:bg-stone-800 text-white px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border border-white/10 backdrop-blur-md"
                >
                  {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.name} className="w-4 h-4 rounded-full" />
+                    <img src={user.photoURL} alt={user.name} className="w-5 h-5 rounded-full border border-white/20" />
                  ) : (
-                    <UserCircle size={14} />
+                    <UserCircle size={16} />
                  )}
                  {user.name}
                </button>
              ) : (
                 <button 
                   onClick={onLogin}
-                  className="flex items-center gap-1 bg-white text-stone-900 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-stone-100 transition-colors shadow-lg shadow-black/20"
+                  className="flex items-center gap-1 bg-white text-stone-900 px-4 py-2 rounded-full text-xs font-bold hover:bg-stone-100 transition-colors shadow-xl"
                 >
                   <GoogleIcon />
-                  Sign in
+                  Sign In
                 </button>
              )}
           </div>
         </div>
 
-        {/* Title & Navigation */}
-        <h1 className="text-3xl md:text-4xl font-bold mb-3 text-stone-100 leading-tight mt-4">
-          Bucătărașul Sătmărean
+        <h1 className="text-4xl md:text-5xl font-bold mb-3 text-white leading-tight mt-6 tracking-tight">
+          Bucătărașul <span className="text-roYellow-400">Sătmărean</span>
         </h1>
-        <p className="text-brand-100 max-w-md text-sm md:text-base mb-6 opacity-90 leading-relaxed">
+        <p className="text-stone-300 max-w-md text-sm md:text-base mb-8 opacity-90 leading-relaxed font-medium">
           {isSavedView 
-            ? "Colecția ta de rețete preferate."
-            : "Spune-ne ce ai în frigider și noi îți gătim ceva delicios în maxim 25 de minute!"
+            ? "Colecția ta personală de gusturi ardelenești."
+            : "Rețete rapide (20-25 min) gândite pentru copii, inspirate din inima Sătmarului."
           }
         </p>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
             {isSavedView ? (
                 <button 
-                onClick={onGoHome}
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full text-sm font-semibold transition-colors border border-white/10"
+                  onClick={onGoHome}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-xl text-sm font-bold transition-all border border-white/10 backdrop-blur-md"
                 >
-                <ArrowLeft size={16} />
-                Înapoi
+                  <ArrowLeft size={18} />
+                  Generator
                 </button>
             ) : (
                 <button 
-                onClick={onShowSaved}
-                className="flex items-center gap-2 bg-brand-700 hover:bg-brand-600 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg transition-colors border border-brand-600 shadow-brand-900/50"
+                  onClick={onShowSaved}
+                  className="flex items-center gap-2 bg-roRed-700 hover:bg-roRed-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl transition-all border border-roRed-600 shadow-roRed-900/40"
                 >
-                <BookHeart size={16} />
-                Rețete {user ? `(${user.preferences?.allergens?.length ? '*' : ''})` : ''}
+                  <BookHeart size={18} />
+                  Colecția Mea {savedCount > 0 ? `(${savedCount})` : ''}
                 </button>
             )}
         </div>
-        
-        {!isSavedView && (
-          <div className="flex items-center gap-4 text-xs font-medium text-brand-200/80 mt-6">
-            <div className="flex items-center gap-1">
-              <Clock size={16} />
-              <span>Max. 25 min</span>
-            </div>
-            <div className="w-1 h-1 bg-brand-600 rounded-full"></div>
-            <div>100% Local</div>
-          </div>
-        )}
       </div>
     </div>
   );

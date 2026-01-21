@@ -7,10 +7,10 @@ export interface Ingredient {
 
 export interface NutritionalDetail {
   ingredient: string;
-  details: string; // e.g., "Vit C, Iron" or general description
+  details: string;
   calories: number;
-  value?: number; // e.g., 12
-  unit?: string; // e.g., "g", "mg", "µg"
+  value?: number;
+  unit?: string;
 }
 
 export interface Recipe {
@@ -23,10 +23,11 @@ export interface Recipe {
   caloriesPerPortion: number;
   ingredients: string[];
   steps: string[];
-  chefTips: string; // "Sfatul Sătmăreanului"
+  chefTips: string;
   nutritionalDetails: NutritionalDetail[];
   imageUrl?: string;
   createdAt?: number;
+  mealType?: string; // Specific type if generated as part of a list
 }
 
 export type AgeGroup = '1-3' | '4-8' | '9-13' | 'adult';
@@ -36,7 +37,7 @@ export type CookingMethod = 'orice' | 'aragaz' | 'cuptor' | 'presiune' | 'airfry
 export interface UserPreferences {
   ingredients: string[];
   ageGroup: AgeGroup;
-  mealType: MealType;
+  mealTypes: MealType[];
   cookingMethod: CookingMethod;
   hideVeggies: boolean;
   portions: number;

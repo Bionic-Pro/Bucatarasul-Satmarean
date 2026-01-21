@@ -1,6 +1,6 @@
 import React from 'react';
 import { Recipe } from '../types';
-import { Clock, Flame, Trash2, ChevronRight, BookOpen, Utensils } from 'lucide-react';
+import { Clock, Flame, Trash2, ChevronRight, BookOpen, Utensils, Sparkles } from 'lucide-react';
 
 interface Props {
   recipes: Recipe[];
@@ -16,15 +16,18 @@ export const SavedRecipesList: React.FC<Props> = ({ recipes, onSelect, onDelete 
            <div className="bg-brand-900/20 w-32 h-32 rounded-full flex items-center justify-center text-brand-500 shadow-inner border border-brand-900/30 animate-pulse">
               <BookOpen size={64} />
            </div>
-           <div className="absolute -bottom-2 -right-2 bg-amber-600 p-2 rounded-full border-4 border-stone-900 text-white shadow-lg">
-              <Utensils size={20} />
+           <div className="absolute -bottom-2 -right-2 bg-amber-600 p-3 rounded-full border-4 border-stone-900 text-white shadow-lg animate-bounce">
+              <Sparkles size={24} />
            </div>
         </div>
         <h3 className="text-2xl font-bold text-stone-100 mb-3">Cartea ta de bucate e goală</h3>
         <p className="text-stone-400 max-w-xs mx-auto text-sm leading-relaxed mb-8">
-          Începe prin a selecta câteva ingrediente în generator. Salvează rețetele care îți fac cu ochiul pentru a le găsi rapid aici!
+          Încă nu ai salvat nicio rețetă. Mergi în generator, selectează ingredientele și apasă butonul de salvare pentru a-ți crea propria colecție!
         </p>
-        <div className="w-16 h-1 bg-brand-900/50 rounded-full"></div>
+        <div className="flex flex-col items-center gap-4">
+           <div className="w-16 h-1 bg-brand-900/50 rounded-full"></div>
+           <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-brand-500">Începe să creezi acum</p>
+        </div>
       </div>
     );
   }

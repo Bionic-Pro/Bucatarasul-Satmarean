@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UserPlus, LogIn, ChefHat, Mail, User } from 'lucide-react';
+import { X, UserPlus, LogIn, ChefHat, Mail, User, Key, AlertTriangle } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -27,7 +27,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, onSuccess }) => {
         </div>
 
         <div className="p-8">
-          <div className="flex justify-between items-start mb-8">
+          <div className="flex justify-between items-start mb-6">
             <div className="bg-roBlue-950/40 p-3 rounded-2xl text-roBlue-400 border border-roBlue-800/50">
               <ChefHat size={32} />
             </div>
@@ -37,7 +37,21 @@ export const AuthModal: React.FC<Props> = ({ onClose, onSuccess }) => {
           </div>
 
           <h2 className="text-2xl font-black text-stone-100 mb-2 uppercase tracking-tight">Bine ai venit!</h2>
-          <p className="text-stone-500 text-xs mb-8 font-medium">Creează-ți propriul profil de bucătar pentru a salva rețetele preferate.</p>
+          <p className="text-stone-500 text-xs mb-6 font-medium">Creează-ți propriul profil de bucătar pentru a salva rețetele preferate.</p>
+
+          {/* API Key Warning Banner */}
+          <div className="bg-roYellow-900/10 border border-roYellow-500/20 p-4 rounded-2xl flex gap-3 mb-8 items-start relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-16 h-16 bg-roYellow-500/5 rounded-full blur-xl -mr-4 -mt-4"></div>
+             <div className="bg-roYellow-500/10 p-2 rounded-lg text-roYellow-500 shrink-0 border border-roYellow-500/20">
+                <Key size={18} />
+             </div>
+             <div>
+                <h3 className="text-roYellow-500 font-black text-[10px] uppercase tracking-widest mb-1">Notă Importantă</h3>
+                <p className="text-stone-400 text-[11px] leading-relaxed">
+                  Pentru a genera rețete cu AI, va fi necesar să configurezi o <strong>Cheie API Google Gemini</strong> (gratuită) în setările profilului după ce te autentifici.
+                </p>
+             </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">

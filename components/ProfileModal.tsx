@@ -175,19 +175,25 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
 
               {activeTab === 'api' && (
                 <div className="space-y-6 animate-fade-in text-center">
-                   <div className="w-16 h-16 bg-stone-950 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/5 shadow-inner">
-                      <Key className={hasKey ? "text-green-500" : "text-roRed-500"} size={32} />
+                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border shadow-inner transition-colors ${hasKey ? 'bg-green-900/20 border-green-500/30 text-green-500' : 'bg-stone-950 border-white/5 text-roRed-500'}`}>
+                      <Key size={32} />
                    </div>
-                   <h3 className="text-sm font-black text-stone-100 uppercase tracking-widest">Configurare AI</h3>
+                   <h3 className="text-sm font-black text-stone-100 uppercase tracking-widest">
+                     {hasKey ? "AI Configurat" : "Configurare Obligatorie"}
+                   </h3>
                    <p className="text-[11px] text-stone-500 leading-relaxed max-w-xs mx-auto">
-                     Aplicația folosește modelele Gemini Pro și Veo. Asigură-te că proiectul tău are billing activ.
+                     Aplicația necesită o cheie API personală pentru a genera rețete. Selectează cheia ta Gemini (Google AI) mai jos.
                    </p>
                    
                    <div className="grid gap-3">
                      <button 
                        type="button"
                        onClick={handleSelectKey}
-                       className="w-full py-4 bg-stone-800 hover:bg-stone-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all border border-white/5 flex items-center justify-center gap-2"
+                       className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
+                         hasKey 
+                           ? 'bg-stone-800 text-stone-300 border-white/5 hover:bg-stone-700' 
+                           : 'bg-roRed-700 hover:bg-roRed-600 text-white border-roRed-600 shadow-xl shadow-roRed-900/30'
+                       }`}
                      >
                         <Key size={16} /> {hasKey ? "Schimbă Cheia API" : "Selectează Cheia API"}
                      </button>

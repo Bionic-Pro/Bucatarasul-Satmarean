@@ -9,7 +9,7 @@ import { ProfileModal } from './components/ProfileModal';
 import { AuthModal } from './components/AuthModal';
 import { generateRecipe } from './services/geminiService';
 import { Recipe, AgeGroup, MealType, UserProfile, CookingMethod } from './types';
-import { Loader2, Utensils, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Loader2, Utensils, CheckCircle, ChevronRight, ChevronLeft, Key, X, ExternalLink } from 'lucide-react';
 
 const App = () => {
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
@@ -36,6 +36,7 @@ const App = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showApiBanner, setShowApiBanner] = useState(true);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'warning'} | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -132,7 +133,10 @@ const App = () => {
       setView('generator');
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     } catch (err: any) {
-      setError("Eroare de conexiune. Încearcă din nou!");
+      setError("Eroare. Verifică dacă ai setat cheia API în profil.");
+      if(user && !showProfileModal) {
+         setShowProfileModal(true); // Auto-open profile on error if logged in
+      }
     } finally {
       setLoading(false);
     }
@@ -255,6 +259,31 @@ const App = () => {
   return (
     <div className="min-h-screen pb-12">
       <div className="max-w-3xl mx-auto px-4 md:px-0">
+        {user && showApiBanner && (
+           <div className="mt-4 mb-2 bg-roBlue-950/30 border border-roBlue-500/20 p-3 rounded-2xl flex items-center justify-between animate-fade-in backdrop-blur-md mx-2">
+              <div className="flex items-center gap-3">
+                 <div className="bg-roBlue-500/10 p-2 rounded-xl text-roBlue-400 border border-roBlue-500/20">
+                   <Key size={16} />
+                 </div>
+                 <div className="flex flex-col">
+                    <p className="text-[10px] font-black text-roBlue-200 uppercase tracking-wider">Configurare Necesară</p>
+                    <p className="text-[11px] text-stone-400 font-medium leading-tight">Nu uita să setezi cheia API în profil pentru AI.</p>
+                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                 <button 
+                   onClick={() => setShowProfileModal(true)}
+                   className="px-3 py-1.5 bg-roBlue-600/20 text-roBlue-200 hover:bg-roBlue-600 hover:text-white rounded-lg text-[10px] font-bold uppercase transition-all"
+                 >
+                   Setează
+                 </button>
+                 <button onClick={() => setShowApiBanner(false)} className="p-1.5 text-stone-500 hover:text-white transition-colors">
+                   <X size={14} />
+                 </button>
+              </div>
+           </div>
+        )}
+        
         <Hero 
           onShowSaved={() => setView('saved')} 
           onGoHome={() => { setView('generator'); handleReset(); }}

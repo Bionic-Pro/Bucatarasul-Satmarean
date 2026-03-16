@@ -1,9 +1,10 @@
 import React from 'react';
-import { ChefHat, Clock, BookHeart, ArrowLeft, Download, UserCircle } from 'lucide-react';
+import { ChefHat, Clock, BookHeart, ArrowLeft, Download, UserCircle, Lightbulb } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface Props {
   onShowSaved: () => void;
+  onShowInspiration: () => void;
   onGoHome: () => void;
   isSavedView: boolean;
   onInstall?: () => void;
@@ -25,6 +26,7 @@ const GoogleIcon = () => (
 
 export const Hero: React.FC<Props> = ({ 
   onShowSaved, 
+  onShowInspiration,
   onGoHome, 
   isSavedView, 
   onInstall, 
@@ -91,12 +93,12 @@ export const Hero: React.FC<Props> = ({
         </h1>
         <p className="text-stone-300 max-w-md text-sm md:text-base mb-8 opacity-90 leading-relaxed font-medium">
           {isSavedView 
-            ? "Colecția ta personală de gusturi ardelenești."
+            ? "Colecția ta personală și sfaturi nutritive pentru cei mici."
             : "Rețete rapide (20-25 min) gândite pentru copii, inspirate din inima Sătmarului."
           }
         </p>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
             {isSavedView ? (
                 <button 
                   onClick={onGoHome}
@@ -106,13 +108,22 @@ export const Hero: React.FC<Props> = ({
                   Generator
                 </button>
             ) : (
-                <button 
-                  onClick={onShowSaved}
-                  className="flex items-center gap-2 bg-roRed-700 hover:bg-roRed-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl transition-all border border-roRed-600 shadow-roRed-900/40"
-                >
-                  <BookHeart size={18} />
-                  Colecția Mea {savedCount > 0 ? `(${savedCount})` : ''}
-                </button>
+                <>
+                  <button 
+                    onClick={onShowSaved}
+                    className="flex items-center gap-2 bg-roRed-700 hover:bg-roRed-600 text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xl transition-all border border-roRed-600 shadow-roRed-900/40"
+                  >
+                    <BookHeart size={18} />
+                    Colecție {savedCount > 0 ? `(${savedCount})` : ''}
+                  </button>
+                  <button 
+                    onClick={onShowInspiration}
+                    className="flex items-center gap-2 bg-roYellow-600 hover:bg-roYellow-500 text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xl transition-all border border-roYellow-500 shadow-roYellow-900/40"
+                  >
+                    <Lightbulb size={18} />
+                    Inspirație
+                  </button>
+                </>
             )}
         </div>
       </div>

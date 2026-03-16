@@ -1,14 +1,15 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Recipe, UserPreferences, NutritionalDetail } from "../types";
 import { COOKING_METHODS_LIST } from "../constants";
 
 const createClient = () => {
-  // Verifică prioritar variabila de mediu injectată de platforma de hosting (Vercel, Netlify, etc.)
-  const apiKey = process.env.API_KEY || (window as any)._env_?.API_KEY;
+  // Verifică prioritar variabila de mediu (Build time), apoi Environment Injection, apoi LocalStorage (Manual User Input)
+  const apiKey = process.env.API_KEY || 
+                 (window as any)._env_?.API_KEY || 
+                 localStorage.getItem('bucataras_api_key');
   
   if (!apiKey) {
-    console.warn("Atenție: Cheia API lipsește. Aplicația va solicita utilizatorului să își folosească propria cheie pentru testare.");
+    console.warn("Atenție: Cheia API lipsește. Aplicația va solicita utilizatorului să își folosească propria cheie.");
   }
   
   return new GoogleGenAI({ apiKey: apiKey || 'MISSING_KEY' });
@@ -60,7 +61,7 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe[]> 
     ${cookingMethodContext}
     PENTRU CINE: ${targetAudience}.
     PORȚII: ${prefs.portions}.
-    TIMP LIMITĂ PER REȚETĂ: Maxim 25 minute.
+    TIMP LIMITĂ PER REȚETĂ: Maxim 20 minute.
     
     IMPORTANT: Returnează un array JSON valid de obiecte rețetă.
   `;
@@ -126,9 +127,9 @@ export const generateRecipe = async (prefs: UserPreferences): Promise<Recipe[]> 
     }
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    // Dacă eroarea este legată de lipsa cheii, forțăm dialogul de selecție dacă suntem în mediul AI Studio
-    if (error.message?.includes("Requested entity was not found") && window.aistudio?.openSelectKey) {
-      window.aistudio.openSelectKey();
+    // Dacă eroarea este legată de lipsa cheii și suntem în AI Studio
+    if (error.message?.includes("Requested entity was not found") && (window as any).aistudio?.openSelectKey) {
+      (window as any).aistudio.openSelectKey();
     }
     throw new Error("Eroare la generare. Verifică setările API în Profil.");
   }

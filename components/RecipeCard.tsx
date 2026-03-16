@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Recipe } from '../types';
 import { Clock, Users, Flame, ChefHat, Share2, RefreshCw, Save, ImagePlus, Leaf, Info, Loader2, AlertTriangle, Scale, Check, Copy } from 'lucide-react';
@@ -24,7 +23,15 @@ export const RecipeCard: React.FC<Props> = ({ recipe, onReset, onSave, isSavedMo
     setIsSaved(false); // Reset saved state visually when switching recipes
   }, [recipe.id]);
 
+  // Auto-generate image if it's a new recipe (not saved) and has no image yet
+  useEffect(() => {
+    if (!isSavedMode && !recipe.imageUrl && !imageUrl && !generatingImage) {
+      handleGenerateImage();
+    }
+  }, [recipe.id, isSavedMode]);
+
   const handleGenerateImage = async () => {
+    if (generatingImage) return;
     setGeneratingImage(true);
     try {
       const url = await generateRecipeImage(recipe.title, recipe.ingredients);
@@ -85,21 +92,29 @@ export const RecipeCard: React.FC<Props> = ({ recipe, onReset, onSave, isSavedMo
          {imageUrl ? (
            <img 
               src={imageUrl} 
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105 animate-fade-in"
               alt={recipe.title}
            />
          ) : (
            <div className="absolute inset-0 bg-gradient-to-r from-stone-900 to-stone-950 flex flex-col items-center justify-center">
              <div className="relative z-10 p-4 text-center">
-                <ChefHat size={48} className="mx-auto mb-4 text-stone-800 opacity-50" />
-                <button 
-                  onClick={handleGenerateImage}
-                  disabled={generatingImage}
-                  className="flex items-center gap-2 bg-roBlue-700 hover:bg-roBlue-600 text-white px-5 py-2.5 rounded-xl shadow-xl border border-roBlue-500/30 font-bold text-sm transition-all transform hover:scale-105"
-                >
-                  {generatingImage ? <Loader2 className="animate-spin" size={18} /> : <ImagePlus size={18} />}
-                  Imagine AI
-                </button>
+                {generatingImage ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="animate-spin text-roBlue-400" size={48} />
+                    <p className="text-xs font-bold text-stone-500 uppercase tracking-widest animate-pulse">Generăm fotografia...</p>
+                  </div>
+                ) : (
+                  <>
+                    <ChefHat size={48} className="mx-auto mb-4 text-stone-800 opacity-50" />
+                    <button 
+                      onClick={handleGenerateImage}
+                      className="flex items-center gap-2 bg-roBlue-700 hover:bg-roBlue-600 text-white px-5 py-2.5 rounded-xl shadow-xl border border-roBlue-500/30 font-bold text-sm transition-all transform hover:scale-105"
+                    >
+                      <ImagePlus size={18} />
+                      Generează Imagine
+                    </button>
+                  </>
+                )}
              </div>
            </div>
          )}

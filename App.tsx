@@ -7,9 +7,51 @@ import { RecipeCard } from './components/RecipeCard';
 import { SavedRecipesList } from './components/SavedRecipesList';
 import { ProfileModal } from './components/ProfileModal';
 import { AuthModal } from './components/AuthModal';
+import { Inspiration } from './components/Inspiration';
 import { generateRecipe } from './services/geminiService';
+import { supabase } from './services/supabase';
 import { Recipe, AgeGroup, MealType, UserProfile, CookingMethod } from './types';
 import { Loader2, Utensils, CheckCircle, ChevronRight, ChevronLeft, Key, X, ExternalLink } from 'lucide-react';
+
+// Helper for image compression to save localStorage space / bandwidth
+const compressImage = (base64Str: string, maxWidth = 600, quality = 0.6): Promise<string> => {
+  return new Promise((resolve) => {
+    // If not a base64 image or too short, return as is
+    if (!base64Str || !base64Str.startsWith('data:image')) {
+      resolve(base64Str);
+      return;
+    }
+
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      // Maintain aspect ratio
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Draw white background (for transparency issues when converting to jpeg)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compress to JPEG
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => resolve(base64Str);
+  });
+};
 
 const App = () => {
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
@@ -29,7 +71,7 @@ const App = () => {
   const [currentRecipeIdx, setCurrentRecipeIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
   
-  const [view, setView] = useState<'generator' | 'saved' | 'details'>('generator');
+  const [view, setView] = useState<'generator' | 'saved' | 'details' | 'inspiration' | 'generated'>('generator');
   const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
   const [selectedSavedRecipe, setSelectedSavedRecipe] = useState<Recipe | null>(null);
 
@@ -44,30 +86,121 @@ const App = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  useEffect(() => {
-    const savedUserStr = localStorage.getItem('bucataras_current_user');
-    if (savedUserStr) {
-      try {
-        const userData = JSON.parse(savedUserStr);
-        setUser(userData);
-        if (userData.preferences) {
-           setAllergens(userData.preferences.allergens || []);
-           setAvoidIngredients(userData.preferences.avoidIngredients || '');
-        }
-      } catch (e) {}
-    }
-  }, []);
+  // --- AUTH & DATA LOADING ---
 
   useEffect(() => {
-    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes_guest';
+    // 1. Initial Load: Check Supabase Session or LocalStorage
+    const initSession = async () => {
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          // Fetch Profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile) {
+            setUser({
+              id: profile.id,
+              name: profile.full_name || session.user.email?.split('@')[0] || 'Utilizator',
+              email: profile.email || session.user.email || '',
+              photoURL: profile.avatar_url,
+              preferences: profile.preferences || { allergens: [], avoidIngredients: '' }
+            });
+            if (profile.preferences) {
+               setAllergens(profile.preferences.allergens || []);
+               setAvoidIngredients(profile.preferences.avoidIngredients || '');
+            }
+          }
+          // Fetch Recipes from DB
+          loadRecipesFromSupabase(session.user.id);
+          return;
+        }
+      } 
+      
+      // Fallback: Local Storage
+      const savedUserStr = localStorage.getItem('bucataras_current_user');
+      if (savedUserStr) {
+        try {
+          const userData = JSON.parse(savedUserStr);
+          setUser(userData);
+          if (userData.preferences) {
+             setAllergens(userData.preferences.allergens || []);
+             setAvoidIngredients(userData.preferences.avoidIngredients || '');
+          }
+          loadRecipesFromLocal(userData.id);
+        } catch (e) {}
+      } else {
+        loadRecipesFromLocal('guest');
+      }
+    };
+
+    initSession();
+
+    // 2. Auth State Listener (Supabase)
+    const { data: authListener } = supabase?.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+         setShowAuthModal(false);
+         const { data: profile } = await supabase!
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+         
+         if (profile) {
+           const newUser = {
+              id: profile.id,
+              name: profile.full_name || 'Utilizator',
+              email: profile.email || '',
+              photoURL: profile.avatar_url,
+              preferences: profile.preferences || { allergens: [], avoidIngredients: '' }
+           };
+           setUser(newUser);
+           showToast(`Bine ai venit, ${newUser.name}!`, 'success');
+           loadRecipesFromSupabase(newUser.id);
+         }
+      } else if (event === 'SIGNED_OUT') {
+         setUser(null);
+         setSavedRecipes([]);
+         setView('generator');
+         showToast("Deconectat.", 'success');
+      }
+    }) || { data: { subscription: { unsubscribe: () => {} } } };
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  const loadRecipesFromSupabase = async (userId: string) => {
+    if (!supabase) return;
+    const { data, error } = await supabase.from('recipes').select('*').order('created_at', { ascending: false });
+    if (!error && data) {
+      // Map DB structure back to app structure if needed (assuming 1:1 match in recipe_data)
+      const mappedRecipes: Recipe[] = data.map((row: any) => ({
+        ...row.recipe_data,
+        id: row.id, // Use DB UUID
+        imageUrl: row.image_url || row.recipe_data.imageUrl // Prefer separate col if used, or JSON
+      }));
+      setSavedRecipes(mappedRecipes);
+    }
+  };
+
+  const loadRecipesFromLocal = (userId: string) => {
+    const storageKey = `bucataras_recipes_${userId}`;
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) setSavedRecipes(JSON.parse(saved));
       else setSavedRecipes([]);
     } catch (e) {}
-  }, [user]);
+  };
+
+  // --- ACTIONS ---
 
   const handleLoginSuccess = (name: string, email: string) => {
+    // This is primarily for the fallback (Local Storage) flow
     const newUser: UserProfile = {
       id: crypto.randomUUID(),
       name: name,
@@ -82,31 +215,55 @@ const App = () => {
     localStorage.setItem('bucataras_current_user', JSON.stringify(newUser));
     setShowAuthModal(false);
     showToast(`Bine ai venit, ${newUser.name}!`, 'success');
+    loadRecipesFromLocal(newUser.id);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('bucataras_current_user');
-    setSavedRecipes([]);
-    setView('generator');
-    setShowProfileModal(false);
-    showToast("Te-ai deconectat cu succes.", 'success');
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    } else {
+      setUser(null);
+      localStorage.removeItem('bucataras_current_user');
+      setSavedRecipes([]);
+      setView('generator');
+      setShowProfileModal(false);
+      showToast("Te-ai deconectat cu succes.", 'success');
+    }
   };
 
-  const handleUpdateUser = (updatedUser: UserProfile) => {
+  const handleUpdateUser = async (updatedUser: UserProfile) => {
     setUser(updatedUser);
-    localStorage.setItem('bucataras_current_user', JSON.stringify(updatedUser));
     if (updatedUser.preferences) {
       setAllergens(updatedUser.preferences.allergens || []);
       setAvoidIngredients(updatedUser.preferences.avoidIngredients || '');
     }
-    showToast("Profil actualizat!", "success");
+
+    if (supabase && user) {
+      // Update Supabase
+      const { error } = await supabase.from('profiles').update({
+        full_name: updatedUser.name,
+        preferences: updatedUser.preferences
+      }).eq('id', user.id);
+      
+      if (!error) showToast("Profil actualizat (Cloud)!", "success");
+    } else {
+      // Update Local
+      localStorage.setItem('bucataras_current_user', JSON.stringify(updatedUser));
+      showToast("Profil actualizat (Local)!", "success");
+    }
   };
 
   const handleToggleIngredient = (name: string) => {
     setSelectedIngredients(prev => 
       prev.includes(name) ? prev.filter(i => i !== name) : [...prev, name]
     );
+  };
+
+  const handleSelectBatch = (ingredients: string[]) => {
+    // Merge new ingredients, avoiding duplicates
+    const combined = Array.from(new Set([...selectedIngredients, ...ingredients]));
+    setSelectedIngredients(combined);
+    showToast(`${ingredients.length} ingrediente adăugate!`, 'success');
   };
 
   const handleGenerate = async () => {
@@ -130,51 +287,124 @@ const App = () => {
       });
       setCurrentRecipes(results);
       setCurrentRecipeIdx(0);
-      setView('generator');
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      setView('generated');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setError("Eroare. Verifică dacă ai setat cheia API în profil.");
       if(user && !showProfileModal) {
-         setShowProfileModal(true); // Auto-open profile on error if logged in
+         setShowProfileModal(true);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveRecipe = (recipeToSave: Recipe) => {
-    const exists = savedRecipes.find(r => r.id === recipeToSave.id || r.title === recipeToSave.title);
-    let updatedList;
-    if (exists) {
-      updatedList = savedRecipes.map(r => (r.id === exists.id || r.title === exists.title) ? { ...recipeToSave, id: r.id } : r);
-    } else {
-      updatedList = [recipeToSave, ...savedRecipes];
+  const handleSaveRecipe = async (recipeToSave: Recipe) => {
+    let optimizedRecipe = { ...recipeToSave };
+    
+    // Compress image
+    if (optimizedRecipe.imageUrl && optimizedRecipe.imageUrl.length > 50000) {
+       try {
+         const compressed = await compressImage(optimizedRecipe.imageUrl);
+         optimizedRecipe.imageUrl = compressed;
+       } catch (e) {
+         console.warn("Failed to compress image, saving original.");
+       }
     }
-    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes_guest';
-    localStorage.setItem(storageKey, JSON.stringify(updatedList));
-    setSavedRecipes(updatedList);
-    showToast(`${recipeToSave.title} salvată!`, 'success');
+
+    if (supabase && user) {
+       // --- SAVE TO SUPABASE ---
+       // Check if already exists (by title for now, or ID if we persisted IDs)
+       // For "save new", we just insert. For "update", we'd need the DB ID.
+       // Assuming simplistic append logic for now.
+       
+       const recipePayload = {
+         user_id: user.id,
+         title: optimizedRecipe.title,
+         description: optimizedRecipe.description,
+         image_url: optimizedRecipe.imageUrl,
+         recipe_data: optimizedRecipe
+       };
+
+       const { error } = await supabase.from('recipes').insert([recipePayload]);
+       
+       if (error) {
+         console.error(error);
+         showToast("Eroare la salvarea în Cloud.", 'error');
+       } else {
+         showToast(`${optimizedRecipe.title} salvată (Cloud)!`, 'success');
+         loadRecipesFromSupabase(user.id);
+       }
+
+    } else {
+      // --- SAVE TO LOCAL STORAGE ---
+      const exists = savedRecipes.find(r => r.id === optimizedRecipe.id || r.title === optimizedRecipe.title);
+      let updatedList;
+      if (exists) {
+        updatedList = savedRecipes.map(r => (r.id === exists.id || r.title === exists.title) ? { ...optimizedRecipe, id: r.id } : r);
+      } else {
+        updatedList = [optimizedRecipe, ...savedRecipes];
+      }
+      
+      const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes_guest';
+      
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updatedList));
+        setSavedRecipes(updatedList);
+        showToast(`${optimizedRecipe.title} salvată!`, 'success');
+      } catch (e: any) {
+        console.error(e);
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+          showToast("Memorie plină! Șterge din rețetele vechi.", 'error');
+        } else {
+          showToast("Eroare la salvare.", 'error');
+        }
+      }
+    }
   };
 
-  const handleDeleteRecipe = (id: string) => {
-    const updatedList = savedRecipes.filter(r => r.id !== id);
-    const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes_guest';
-    localStorage.setItem(storageKey, JSON.stringify(updatedList));
-    setSavedRecipes(updatedList);
-    if (selectedSavedRecipe?.id === id) {
-       setSelectedSavedRecipe(null);
-       setView('saved');
+  const handleDeleteRecipe = async (id: string) => {
+    if (supabase && user) {
+       // Delete from DB
+       const { error } = await supabase.from('recipes').delete().eq('id', id);
+       if (!error) {
+         setSavedRecipes(prev => prev.filter(r => r.id !== id));
+         showToast("Rețetă ștearsă (Cloud).", 'success');
+         if (selectedSavedRecipe?.id === id) {
+            setSelectedSavedRecipe(null);
+            setView('saved');
+         }
+       } else {
+         showToast("Eroare la ștergere.", 'error');
+       }
+    } else {
+      // Delete Local
+      const updatedList = savedRecipes.filter(r => r.id !== id);
+      const storageKey = user ? `bucataras_recipes_${user.id}` : 'bucataras_recipes_guest';
+      localStorage.setItem(storageKey, JSON.stringify(updatedList));
+      setSavedRecipes(updatedList);
+      if (selectedSavedRecipe?.id === id) {
+         setSelectedSavedRecipe(null);
+         setView('saved');
+      }
+      showToast("Rețetă ștearsă.", 'success');
     }
-    showToast("Rețetă ștearsă.", 'success');
   };
 
   const handleReset = () => {
     setCurrentRecipes([]);
     setCurrentRecipeIdx(0);
+    setView('generator');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const renderContent = () => {
+    if (view === 'inspiration') {
+      return (
+        <Inspiration onBack={() => setView('generator')} />
+      );
+    }
+
     if (view === 'saved') {
       return (
         <SavedRecipesList 
@@ -196,11 +426,46 @@ const App = () => {
        );
     }
 
+    if (view === 'generated' && currentRecipes.length > 0) {
+        return (
+            <div className="animate-fade-in space-y-6">
+                <div className="flex items-center justify-between mb-4 px-2">
+                    <button
+                        onClick={() => setView('generator')}
+                        className="text-xs font-black uppercase tracking-widest text-stone-500 hover:text-roBlue-400 flex items-center gap-2 transition-colors bg-stone-900/40 px-4 py-3 rounded-xl border border-white/5 hover:bg-stone-800"
+                    >
+                        <ChevronLeft size={16} /> Modifică Ingredientele
+                    </button>
+                    <span className="text-[10px] font-bold text-stone-600 uppercase tracking-widest hidden sm:block">Rezultate Generale</span>
+                </div>
+
+                 {currentRecipes.length > 1 && (
+                    <div className="flex items-center justify-between mb-6 bg-stone-950/80 p-4 rounded-[2rem] border border-white/10 backdrop-blur-xl shadow-2xl">
+                        <button onClick={() => setCurrentRecipeIdx(p => Math.max(0, p - 1))} disabled={currentRecipeIdx === 0} className="p-3 disabled:opacity-20 text-roBlue-500 hover:bg-white/5 rounded-2xl transition-all"><ChevronLeft size={28} /></button>
+                        <div className="text-center">
+                            <span className="text-[9px] font-black text-stone-600 uppercase tracking-[0.4em]">Propunerea {currentRecipeIdx + 1} din {currentRecipes.length}</span>
+                            <h4 className="text-base font-black text-roYellow-400 tracking-tight">{currentRecipes[currentRecipeIdx].mealType}</h4>
+                        </div>
+                        <button onClick={() => setCurrentRecipeIdx(p => Math.min(currentRecipes.length - 1, p + 1))} disabled={currentRecipeIdx === currentRecipes.length - 1} className="p-3 disabled:opacity-20 text-roRed-500 hover:bg-white/5 rounded-2xl transition-all"><ChevronRight size={28} /></button>
+                    </div>
+                )}
+                
+                <RecipeCard 
+                    key={currentRecipes[currentRecipeIdx].id} 
+                    recipe={currentRecipes[currentRecipeIdx]} 
+                    onReset={handleReset} 
+                    onSave={handleSaveRecipe} 
+                />
+            </div>
+        );
+    }
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <IngredientSelector 
           selectedIds={selectedIngredients}
           onToggle={handleToggleIngredient}
+          onSelectBatch={handleSelectBatch}
           customIngredients={customIngredients}
           onAddCustom={(n) => { setCustomIngredients(p => [...p, n]); setSelectedIngredients(p => [...p, n]); }}
           onRemoveCustom={(n) => { setCustomIngredients(p => p.filter(i => i !== n)); setSelectedIngredients(p => p.filter(i => i !== n)); }}
@@ -236,22 +501,6 @@ const App = () => {
             {loading ? <><Loader2 className="animate-spin" /> Pregătim...</> : <><Utensils className={selectedIngredients.length > 0 ? "animate-bounce" : ""} /> Generează Gustul Ardelenesc</>}
           </button>
         </div>
-        
-        {currentRecipes.length > 0 && (
-           <div className="mt-12 border-t border-white/5 pt-10 pb-16 animate-fade-in">
-              {currentRecipes.length > 1 && (
-                <div className="flex items-center justify-between mb-10 bg-stone-950/80 p-5 rounded-[2rem] border border-white/10 backdrop-blur-xl shadow-2xl">
-                  <button onClick={() => setCurrentRecipeIdx(p => Math.max(0, p - 1))} disabled={currentRecipeIdx === 0} className="p-3 disabled:opacity-20 text-roBlue-500 hover:bg-white/5 rounded-2xl transition-all"><ChevronLeft size={32} /></button>
-                  <div className="text-center">
-                    <span className="text-[9px] font-black text-stone-600 uppercase tracking-[0.4em]">Propunerea {currentRecipeIdx + 1} din {currentRecipes.length}</span>
-                    <h4 className="text-base font-black text-roYellow-400 tracking-tight">{currentRecipes[currentRecipeIdx].mealType}</h4>
-                  </div>
-                  <button onClick={() => setCurrentRecipeIdx(p => Math.min(currentRecipes.length - 1, p + 1))} disabled={currentRecipeIdx === currentRecipes.length - 1} className="p-3 disabled:opacity-20 text-roRed-500 hover:bg-white/5 rounded-2xl transition-all"><ChevronRight size={32} /></button>
-                </div>
-              )}
-              <RecipeCard key={currentRecipes[currentRecipeIdx].id} recipe={currentRecipes[currentRecipeIdx]} onReset={handleReset} onSave={handleSaveRecipe} />
-           </div>
-        )}
       </div>
     );
   };
@@ -286,8 +535,9 @@ const App = () => {
         
         <Hero 
           onShowSaved={() => setView('saved')} 
+          onShowInspiration={() => setView('inspiration')}
           onGoHome={() => { setView('generator'); handleReset(); }}
-          isSavedView={view === 'saved' || view === 'details'}
+          isSavedView={view === 'saved' || view === 'details' || view === 'inspiration' || view === 'generated'} 
           user={user}
           onLogin={() => setShowAuthModal(true)} 
           onOpenProfile={() => setShowProfileModal(true)}

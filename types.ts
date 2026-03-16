@@ -3,6 +3,7 @@ export interface Ingredient {
   id: string;
   name: string;
   category: 'legume' | 'carne' | 'lactate' | 'baza' | 'fructe' | 'smoothie';
+  subCategory?: string;
 }
 
 export interface NutritionalDetail {
@@ -28,6 +29,13 @@ export interface Recipe {
   imageUrl?: string;
   createdAt?: number;
   mealType?: string; // Specific type if generated as part of a list
+}
+
+export interface SmoothiePreset {
+  id: string;
+  name: string;
+  category: string;
+  ingredients: string[];
 }
 
 export type AgeGroup = '1-3' | '4-8' | '9-13' | 'adult';

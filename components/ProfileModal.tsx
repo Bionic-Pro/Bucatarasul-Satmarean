@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
-import { UserCircle, Save, Trash2, X, AlertTriangle, ShieldCheck, Mail, Key, Settings2, ExternalLink } from 'lucide-react';
+import { UserCircle, Save, Trash2, X, AlertTriangle, ShieldCheck, Mail, Key, Settings2, ExternalLink, Check } from 'lucide-react';
 import { COMMON_ALLERGENS } from '../constants';
 
 interface Props {
@@ -18,17 +18,29 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
   const [allergens, setAllergens] = useState<string[]>(user.preferences.allergens || []);
   const [avoidIngredients, setAvoidIngredients] = useState(user.preferences.avoidIngredients || '');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  
   const [hasKey, setHasKey] = useState(false);
+  const [isAiStudio, setIsAiStudio] = useState(false);
+  const [manualKey, setManualKey] = useState('');
 
   useEffect(() => {
     const checkKey = async () => {
+      // 1. Check AI Studio Environment
       const aiStudio = (window as any).aistudio;
-      if (aiStudio?.hasSelectedApiKey) {
-        try {
-          const selected = await aiStudio.hasSelectedApiKey();
-          setHasKey(selected);
-        } catch (e) {
-          console.error("Eroare la verificarea cheii:", e);
+      if (aiStudio) {
+        setIsAiStudio(true);
+        if (aiStudio.hasSelectedApiKey) {
+            try {
+              const selected = await aiStudio.hasSelectedApiKey();
+              setHasKey(selected);
+            } catch (e) { console.error(e); }
+        }
+      } else {
+        // 2. Check Local Storage (Fallback for Vercel/Web)
+        const localKey = localStorage.getItem('bucataras_api_key');
+        if (localKey) {
+          setHasKey(true);
+          setManualKey(localKey);
         }
       }
     };
@@ -39,13 +51,22 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
     const aiStudio = (window as any).aistudio;
     if (aiStudio?.openSelectKey) {
       await aiStudio.openSelectKey();
-      // Presupunem succesul conform regulilor de race condition
       setHasKey(true);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Save API Key if manually entered
+    if (!isAiStudio && manualKey.trim()) {
+        localStorage.setItem('bucataras_api_key', manualKey.trim());
+        setHasKey(true);
+    } else if (!isAiStudio && !manualKey.trim()) {
+        localStorage.removeItem('bucataras_api_key');
+        setHasKey(false);
+    }
+
     onUpdate({ 
       ...user, 
       name, 
@@ -93,22 +114,25 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
         {/* Tab Switcher */}
         <div className="flex bg-stone-950/50 p-1 border-b border-white/5">
            <button 
+             type="button"
              onClick={() => setActiveTab('cont')}
              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${activeTab === 'cont' ? 'bg-stone-800 text-roBlue-400' : 'text-stone-600'}`}
            >
              Cont
            </button>
            <button 
+             type="button"
              onClick={() => setActiveTab('preferinte')}
              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${activeTab === 'preferinte' ? 'bg-stone-800 text-roYellow-500' : 'text-stone-600'}`}
            >
              Preferințe
            </button>
            <button 
+             type="button"
              onClick={() => setActiveTab('api')}
              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-xl ${activeTab === 'api' ? 'bg-stone-800 text-roRed-500' : 'text-stone-600'}`}
            >
-             API
+             API Key
            </button>
         </div>
 
@@ -179,32 +203,49 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
                       <Key size={32} />
                    </div>
                    <h3 className="text-sm font-black text-stone-100 uppercase tracking-widest">
-                     {hasKey ? "AI Configurat" : "Configurare Obligatorie"}
+                     {hasKey ? "AI Configurat" : "Lipsă Cheie API"}
                    </h3>
                    <p className="text-[11px] text-stone-500 leading-relaxed max-w-xs mx-auto">
-                     Aplicația necesită o cheie API personală pentru a genera rețete. Selectează cheia ta Gemini (Google AI) mai jos.
+                     Aplicația folosește Google Gemini. {isAiStudio ? "Selectează cheia ta mai jos." : "Introdu cheia API manual pentru a genera rețete."}
                    </p>
                    
-                   <div className="grid gap-3">
-                     <button 
-                       type="button"
-                       onClick={handleSelectKey}
-                       className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
-                         hasKey 
-                           ? 'bg-stone-800 text-stone-300 border-white/5 hover:bg-stone-700' 
-                           : 'bg-roRed-700 hover:bg-roRed-600 text-white border-roRed-600 shadow-xl shadow-roRed-900/30'
-                       }`}
-                     >
-                        <Key size={16} /> {hasKey ? "Schimbă Cheia API" : "Selectează Cheia API"}
-                     </button>
+                   <div className="grid gap-3 max-w-sm mx-auto w-full">
+                     {isAiStudio ? (
+                       <button 
+                         type="button"
+                         onClick={handleSelectKey}
+                         className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
+                           hasKey 
+                             ? 'bg-stone-800 text-stone-300 border-white/5 hover:bg-stone-700' 
+                             : 'bg-roRed-700 hover:bg-roRed-600 text-white border-roRed-600 shadow-xl shadow-roRed-900/30'
+                         }`}
+                       >
+                          <Key size={16} /> {hasKey ? "Schimbă Cheia API" : "Selectează Cheia API"}
+                       </button>
+                     ) : (
+                       <div className="relative">
+                         <input 
+                            type="password" 
+                            value={manualKey}
+                            onChange={(e) => setManualKey(e.target.value)}
+                            placeholder="Lipește cheia API aici (AI Studio)"
+                            className="w-full bg-stone-950 border border-stone-800 rounded-2xl px-5 py-4 text-stone-200 text-xs focus:border-roRed-500/50 outline-none transition-all text-center"
+                         />
+                         {manualKey && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500">
+                                <Check size={16} />
+                            </div>
+                         )}
+                       </div>
+                     )}
                      
                      <a 
-                       href="https://ai.google.dev/gemini-api/docs/billing" 
+                       href="https://aistudio.google.com/app/apikey" 
                        target="_blank" 
                        rel="noopener noreferrer"
-                       className="text-[10px] font-black text-roBlue-400 uppercase tracking-widest hover:underline flex items-center justify-center gap-1"
+                       className="text-[10px] font-black text-roBlue-400 uppercase tracking-widest hover:underline flex items-center justify-center gap-1 mt-2"
                      >
-                       Documentație Plată <ExternalLink size={12} />
+                       Obține o cheie gratuită <ExternalLink size={12} />
                      </a>
                    </div>
                 </div>
@@ -222,7 +263,7 @@ export const ProfileModal: React.FC<Props> = ({ user, onClose, onUpdate, onDelet
                   type="submit" 
                   className="flex-1 py-4 bg-gradient-to-r from-roBlue-700 to-roBlue-800 hover:from-roBlue-600 hover:to-roBlue-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-roBlue-950/50 flex items-center justify-center gap-2 border border-roBlue-500/30"
                 >
-                  <Save size={16} /> Salvează
+                  <Save size={16} /> Salvează {(!isAiStudio && activeTab === 'api') && "& Cheia API"}
                 </button>
               </div>
             </form>

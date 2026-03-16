@@ -1,6 +1,6 @@
 {
-  "name": "Bucătărașul Sătmărean",
-  "description": "Generator de rețete rapide (20-25 min) pentru copii și adulți, bazat pe ingrediente locale din Satu Mare.",
+  "name": "Bucătărașul Sătmărean v1.0",
+  "description": "Generator de rețete rapide (max 20 min) pentru copii și adulți, bazat pe ingrediente locale din Satu Mare.",
   "requestFramePermissions": [
     "camera",
     "geolocation"

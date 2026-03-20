@@ -285,6 +285,17 @@ const App = () => {
         allergens,
         spices
       });
+      
+      // Track Google Ads Conversion
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'conversion', {
+          'send_to': 'AW-18020149996/btD4CMenzYkcEOzV1pBD',
+          'value': 1.0,
+          'currency': 'RON',
+          'transaction_id': `gen_${Date.now()}`
+        });
+      }
+
       setCurrentRecipes(results);
       setCurrentRecipeIdx(0);
       setView('generated');
